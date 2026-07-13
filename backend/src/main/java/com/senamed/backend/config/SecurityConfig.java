@@ -1,7 +1,9 @@
 package com.senamed.backend.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.senamed.backend.security.JwtAuthenticationFilter;
 import com.senamed.backend.security.JwtService;
+import com.senamed.backend.security.RateLimitFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,13 +26,16 @@ public class SecurityConfig {
 
     private final JwtService jwtService;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final ObjectMapper objectMapper;
 
     @Value("${senamed.cors.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtService jwtService, RestAuthenticationEntryPoint restAuthenticationEntryPoint) {
+    public SecurityConfig(
+            JwtService jwtService, RestAuthenticationEntryPoint restAuthenticationEntryPoint, ObjectMapper objectMapper) {
         this.jwtService = jwtService;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+        this.objectMapper = objectMapper;
     }
 
     @Bean
@@ -47,10 +52,12 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new RateLimitFilter(objectMapper), JwtAuthenticationFilter.class);
 
         return http.build();
     }
