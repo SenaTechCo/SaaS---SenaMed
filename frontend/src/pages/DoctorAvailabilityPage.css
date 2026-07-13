@@ -1,0 +1,30 @@
+.availability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.availability-day {
+  margin-bottom: 0;
+}
+
+.availability-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.availability-slot input[type='time'] {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.availability-slot span {
+  font-size: 13px;
+  color: #6b7280;
+}
