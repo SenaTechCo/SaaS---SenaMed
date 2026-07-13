@@ -1,0 +1,21 @@
+# IDE / editor tooling (local only)
+.github/modernize/
+.vscode/
+.idea/
+
+# Backend (Maven / Spring Boot)
+backend/target/
+
+# Frontend (Node / Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.local
+*.local
