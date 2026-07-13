@@ -47,6 +47,27 @@ public class Clinic {
     @Column(name = "trial_ends_at")
     private Instant trialEndsAt;
 
+    /**
+     * Simple placeholder for the plan/subscription limit until Fase 5 implements real plans and
+     * billing. RN-015 (max active doctors per clinic) is validated against this column in the
+     * meantime - always server-side, see {@code DoctorService.create}. Not editable via
+     * PUT /api/clinics/me; it is plan-controlled.
+     */
+    @Column(name = "max_doctors", nullable = false)
+    private Integer maxDoctors = 3;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    @Column(name = "cover_image_url")
+    private String coverImageUrl;
+
+    @Column(name = "primary_color", length = 7)
+    private String primaryColor;
+
+    @Column(name = "secondary_color", length = 7)
+    private String secondaryColor;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -115,6 +136,42 @@ public class Clinic {
 
     public Instant getTrialEndsAt() {
         return trialEndsAt;
+    }
+
+    public Integer getMaxDoctors() {
+        return maxDoctors;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
+    }
+
+    public String getCoverImageUrl() {
+        return coverImageUrl;
+    }
+
+    public void setCoverImageUrl(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
+    }
+
+    public String getPrimaryColor() {
+        return primaryColor;
+    }
+
+    public void setPrimaryColor(String primaryColor) {
+        this.primaryColor = primaryColor;
+    }
+
+    public String getSecondaryColor() {
+        return secondaryColor;
+    }
+
+    public void setSecondaryColor(String secondaryColor) {
+        this.secondaryColor = secondaryColor;
     }
 
     public Instant getCreatedAt() {

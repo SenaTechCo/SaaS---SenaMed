@@ -14,7 +14,12 @@ public record ClinicProfileResponse(
         String email,
         String timezone,
         ClinicStatus status,
-        Instant trialEndsAt) {
+        Instant trialEndsAt,
+        Integer maxDoctors,
+        String logoUrl,
+        String coverImageUrl,
+        String primaryColor,
+        String secondaryColor) {
 
     public static ClinicProfileResponse from(Clinic clinic) {
         return new ClinicProfileResponse(
@@ -26,6 +31,11 @@ public record ClinicProfileResponse(
                 clinic.getEmail(),
                 clinic.getTimezone(),
                 clinic.getStatus(),
-                clinic.getTrialEndsAt());
+                clinic.getTrialEndsAt(),
+                clinic.getMaxDoctors(),
+                clinic.getLogoUrl(),
+                clinic.getCoverImageUrl(),
+                clinic.getPrimaryColor(),
+                clinic.getSecondaryColor());
     }
 }

@@ -67,9 +67,14 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(meResponse.getBody().slug()).isEqualTo("clinica-boa-saude");
         assertThat(meResponse.getBody().name()).isEqualTo("Clinica Boa Saude");
 
-        // update /api/clinics/me WITH token -> 200 and reflects changes
+        // /api/clinics/me already reflects the maxDoctors plan placeholder (default 3)
+        assertThat(meResponse.getBody().maxDoctors()).isEqualTo(3);
+
+        // update /api/clinics/me WITH token -> 200 and reflects changes, including customization
         ClinicUpdateRequest updateRequest = new ClinicUpdateRequest(
-                "Clinica Boa Saude Atualizada", "Nova descricao", "11999998888", "contato@boasaude.com", "America/Sao_Paulo");
+                "Clinica Boa Saude Atualizada", "Nova descricao", "11999998888", "contato@boasaude.com",
+                "America/Sao_Paulo", "https://cdn.example.com/logo.png", "https://cdn.example.com/cover.png",
+                "#1A73E8", "#FF5722");
         ResponseEntity<ClinicProfileResponse> updateResponse = restTemplate.exchange(
                 url("/api/clinics/me"), HttpMethod.PUT, new HttpEntity<>(updateRequest, headers), ClinicProfileResponse.class);
 
@@ -77,6 +82,11 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(updateResponse.getBody().name()).isEqualTo("Clinica Boa Saude Atualizada");
         assertThat(updateResponse.getBody().description()).isEqualTo("Nova descricao");
         assertThat(updateResponse.getBody().slug()).isEqualTo("clinica-boa-saude"); // unchanged
+        assertThat(updateResponse.getBody().logoUrl()).isEqualTo("https://cdn.example.com/logo.png");
+        assertThat(updateResponse.getBody().coverImageUrl()).isEqualTo("https://cdn.example.com/cover.png");
+        assertThat(updateResponse.getBody().primaryColor()).isEqualTo("#1A73E8");
+        assertThat(updateResponse.getBody().secondaryColor()).isEqualTo("#FF5722");
+        assertThat(updateResponse.getBody().maxDoctors()).isEqualTo(3); // not editable via this endpoint
     }
 
     @Test

@@ -34,7 +34,8 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbcTemplate.execute("TRUNCATE TABLE users, clinics RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute(
+                "TRUNCATE TABLE doctor_time_off, doctor_availability, doctors, users, clinics RESTART IDENTITY CASCADE");
     }
 
     protected String url(String path) {

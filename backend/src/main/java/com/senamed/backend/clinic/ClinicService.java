@@ -35,6 +35,10 @@ public class ClinicService {
         clinic.setPhone(request.phone());
         clinic.setEmail(request.email());
         clinic.setTimezone(request.timezone());
+        clinic.setLogoUrl(request.logoUrl());
+        clinic.setCoverImageUrl(request.coverImageUrl());
+        clinic.setPrimaryColor(request.primaryColor());
+        clinic.setSecondaryColor(request.secondaryColor());
         return ClinicProfileResponse.from(clinic);
     }
 
