@@ -6,6 +6,8 @@ import { DoctorsPage } from './pages/DoctorsPage';
 import { DoctorAvailabilityPage } from './pages/DoctorAvailabilityPage';
 import { DoctorTimeOffPage } from './pages/DoctorTimeOffPage';
 import { ClinicCustomizationPage } from './pages/ClinicCustomizationPage';
+import { PublicClinicPage } from './pages/PublicClinicPage';
+import { CancelAppointmentPage } from './pages/CancelAppointmentPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -14,6 +16,8 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/cadastro" element={<CadastroPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/clinica/:slug" element={<PublicClinicPage />} />
+      <Route path="/cancelar/:token" element={<CancelAppointmentPage />} />
       <Route
         path="/dashboard"
         element={

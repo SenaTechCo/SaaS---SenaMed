@@ -1,0 +1,168 @@
+.public-page {
+  min-height: 100vh;
+  background: #f4f5f7;
+}
+
+.public-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+.public-header {
+  padding: 32px 24px;
+  color: #fff;
+}
+
+.public-cover {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.public-header-content {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.public-header-content h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+}
+
+.public-description {
+  margin: 0 0 8px;
+  opacity: 0.9;
+}
+
+.public-contact {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.public-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+}
+
+.card h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.doctor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.doctor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.doctor-card span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.doctor-card-selected {
+  background: #eef2ff;
+  border-width: 2px;
+}
+
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.slot-button {
+  padding: 8px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.slot-button-selected {
+  color: #fff;
+}
+
+.lgpd-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  margin: 16px 0;
+  cursor: pointer;
+}
+
+.lgpd-consent input {
+  margin-top: 3px;
+}
+
+.public-confirmation h2 {
+  margin-top: 0;
+}
+
+.public-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 16px 0;
+}
+
+.public-summary dt {
+  font-weight: 600;
+  color: #374151;
+}
+
+.public-summary dd {
+  margin: 0;
+}
+
+.public-cancel-notice {
+  background: #f9fafb;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 14px;
+  word-break: break-all;
+}
+
+.public-cancel-notice p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.public-cancel-card {
+  max-width: 480px;
+  margin: 40px auto 0;
+}
