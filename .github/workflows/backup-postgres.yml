@@ -1,0 +1,49 @@
+# KAN-72: automated Postgres backup. Neon's free tier (where production Postgres runs - see
+# render.yaml) has no built-in automatic backups, so this fills that gap with a daily pg_dump
+# stored as a workflow artifact. Requires 5 repo secrets: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD
+# (the same Neon credentials configured in Render) and BACKUP_ENCRYPTION_PASSPHRASE (a separate,
+# randomly generated passphrase you create just for this) - see Settings > Secrets and variables >
+# Actions.
+#
+# The dump is GPG-encrypted before upload (security review, 2026-07-14): appointments contain
+# patient name/email/phone (LGPD-regulated PII), and an unencrypted dump in a workflow artifact
+# would be readable by anyone ever granted read access to this repo, not just people with real
+# database credentials - a materially wider audience than the DB itself. To restore a backup:
+#   gpg --decrypt --batch --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" -o restored.dump backup.dump.gpg
+name: Backup Postgres
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily at 06:00 UTC (~03:00 America/Sao_Paulo)
+  workflow_dispatch: {} # allows a manual "Run workflow" trigger too
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump and encrypt database
+        env:
+          PGHOST: ${{ secrets.DB_HOST }}
+          PGPORT: "5432"
+          PGDATABASE: ${{ secrets.DB_NAME }}
+          PGUSER: ${{ secrets.DB_USER }}
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          PGSSLMODE: require
+          PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          mkdir -p backup
+          filename="backup/senamed-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
+          pg_dump --format=custom --file="$filename"
+          test -s "$filename" # fail loudly if the dump is missing/empty rather than encrypting/uploading garbage
+          gpg --symmetric --cipher-algo AES256 --batch --passphrase "$PASSPHRASE" "$filename"
+          rm "$filename" # only the encrypted .gpg file should ever leave this step
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-backup-${{ github.run_id }}
+          path: backup/*.dump.gpg
+          retention-days: 30
