@@ -18,6 +18,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.time.Duration;
 import java.util.List;
 
 @Configuration
@@ -30,6 +31,12 @@ public class SecurityConfig {
 
     @Value("${senamed.cors.allowed-origins}")
     private String allowedOrigins;
+
+    @Value("${senamed.rate-limit.public-appointments.capacity:8}")
+    private int rateLimitCapacity;
+
+    @Value("${senamed.rate-limit.public-appointments.window-seconds:60}")
+    private int rateLimitWindowSeconds;
 
     public SecurityConfig(
             JwtService jwtService, RestAuthenticationEntryPoint restAuthenticationEntryPoint, ObjectMapper objectMapper) {
@@ -53,11 +60,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/webhooks/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new RateLimitFilter(objectMapper), JwtAuthenticationFilter.class);
+                .addFilterBefore(
+                        new RateLimitFilter(objectMapper, rateLimitCapacity, Duration.ofSeconds(rateLimitWindowSeconds)),
+                        JwtAuthenticationFilter.class);
 
         return http.build();
     }

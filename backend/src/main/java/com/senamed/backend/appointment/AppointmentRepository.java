@@ -15,4 +15,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      *  doctor whose start falls within [dayStart, dayEnd). */
     List<Appointment> findByDoctorIdAndStatusAndStartsAtGreaterThanEqualAndStartsAtLessThan(
             Long doctorId, AppointmentStatus status, LocalDateTime dayStart, LocalDateTime dayEnd);
+
+    /** Backs the authenticated "dashboard de consultas" listing (RF-018). */
+    List<Appointment> findAllByClinicIdOrderByStartsAtAsc(Long clinicId);
 }

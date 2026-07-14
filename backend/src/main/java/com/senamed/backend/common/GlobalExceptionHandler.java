@@ -1,5 +1,6 @@
 package com.senamed.backend.common;
 
+import com.senamed.backend.billing.mercadopago.MercadoPagoIntegrationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -46,6 +47,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAppointmentConflict(AppointmentConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ClinicBlockedException.class)
+    public ResponseEntity<ApiError> handleClinicBlocked(ClinicBlockedException ex) {
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                .body(ApiError.of(HttpStatus.PAYMENT_REQUIRED.value(), "Payment Required", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MercadoPagoIntegrationException.class)
+    public ResponseEntity<ApiError> handleMercadoPagoIntegration(MercadoPagoIntegrationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiError.of(HttpStatus.BAD_GATEWAY.value(), "Bad Gateway",
+                        "Não foi possível se comunicar com o Mercado Pago no momento. Tente novamente em instantes."));
     }
 
     @ExceptionHandler(AuthenticationException.class)

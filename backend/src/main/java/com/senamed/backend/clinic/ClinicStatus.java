@@ -3,6 +3,7 @@ package com.senamed.backend.clinic;
 public enum ClinicStatus {
     TRIAL,
     ACTIVE,
-    SUSPENDED,
-    CANCELED
+    PAST_DUE,
+    BLOCKED,
+    CANCELLED
 }

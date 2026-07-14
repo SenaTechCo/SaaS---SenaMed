@@ -4,6 +4,7 @@ import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
 import com.senamed.backend.appointment.dto.AvailableSlotsResponse;
 import com.senamed.backend.appointment.dto.PublicClinicResponse;
+import com.senamed.backend.notification.AppointmentMessageService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicSchedulingController {
 
     private final PublicSchedulingService schedulingService;
+    private final AppointmentMessageService appointmentMessageService;
 
-    public PublicSchedulingController(PublicSchedulingService schedulingService) {
+    public PublicSchedulingController(
+            PublicSchedulingService schedulingService, AppointmentMessageService appointmentMessageService) {
         this.schedulingService = schedulingService;
+        this.appointmentMessageService = appointmentMessageService;
     }
 
     @GetMapping("/clinics/{slug}")
@@ -50,5 +54,11 @@ public class PublicSchedulingController {
     @PostMapping("/appointments/cancel/{token}")
     public AppointmentResponse cancel(@PathVariable("token") String token) {
         return schedulingService.cancel(token);
+    }
+
+    /** Same raw-string-token / malformed==unknown==404 pattern as {@link #cancel}. */
+    @PostMapping("/appointments/confirm/{token}")
+    public AppointmentResponse confirm(@PathVariable("token") String token) {
+        return appointmentMessageService.confirmAttendance(token);
     }
 }

@@ -24,18 +24,27 @@ import java.util.concurrent.ConcurrentHashMap;
  * kept in-memory per application instance; moving to a shared store (e.g. Redis) is only needed
  * once this app runs behind more than one instance, since each instance would otherwise enforce
  * its own independent limit.
+ *
+ * <p>Capacity/window are constructor-configurable (not just constants) because integration tests
+ * share a single cached Spring context - and therefore a single {@code bucketsByIp} instance and
+ * the same loopback "IP" - across multiple test classes that each book several appointments; the
+ * production default of 8/minute is tight enough that this shared state alone can trip a 429 that
+ * has nothing to do with the behavior under test. The "test" profile raises this to effectively
+ * unlimited (see {@code application-test.properties}).</p>
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final String LIMITED_PATH = "/api/public/appointments";
-    private static final int CAPACITY_PER_WINDOW = 8;
-    private static final Duration REFILL_WINDOW = Duration.ofMinutes(1);
 
     private final ObjectMapper objectMapper;
+    private final int capacityPerWindow;
+    private final Duration refillWindow;
     private final Map<String, Bucket> bucketsByIp = new ConcurrentHashMap<>();
 
-    public RateLimitFilter(ObjectMapper objectMapper) {
+    public RateLimitFilter(ObjectMapper objectMapper, int capacityPerWindow, Duration refillWindow) {
         this.objectMapper = objectMapper;
+        this.capacityPerWindow = capacityPerWindow;
+        this.refillWindow = refillWindow;
     }
 
     @Override
@@ -67,7 +76,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private Bucket newBucket() {
-        Bandwidth limit = Bandwidth.builder().capacity(CAPACITY_PER_WINDOW).refillGreedy(CAPACITY_PER_WINDOW, REFILL_WINDOW).build();
+        Bandwidth limit = Bandwidth.builder().capacity(capacityPerWindow).refillGreedy(capacityPerWindow, refillWindow).build();
         return Bucket.builder().addLimit(limit).build();
     }
 

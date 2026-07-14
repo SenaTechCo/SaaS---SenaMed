@@ -34,8 +34,12 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
+        // "plans" is deliberately NOT truncated - it's migration-seeded reference data (Fase 5),
+        // not per-test data; Flyway only runs once against the test DB, so wiping it here would
+        // permanently remove the 3 seed rows before the very first test.
         jdbcTemplate.execute(
-                "TRUNCATE TABLE appointments, doctor_time_off, doctor_availability, doctors, users, clinics RESTART IDENTITY CASCADE");
+                "TRUNCATE TABLE appointments, doctor_time_off, doctor_availability, doctors, users, "
+                        + "clinics, subscriptions RESTART IDENTITY CASCADE");
     }
 
     protected String url(String path) {

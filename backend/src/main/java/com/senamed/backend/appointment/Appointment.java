@@ -90,6 +90,9 @@ public class Appointment extends TenantScopedEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+
     protected Appointment() {
         // JPA
     }
@@ -160,7 +163,16 @@ public class Appointment extends TenantScopedEntity {
         return createdAt;
     }
 
+    public Instant getConfirmedAt() {
+        return confirmedAt;
+    }
+
     public void cancel() {
         this.status = AppointmentStatus.CANCELLED;
+    }
+
+    /** Records the patient's attendance confirmation (RF-016) - orthogonal to {@link #status}. */
+    public void confirm() {
+        this.confirmedAt = Instant.now();
     }
 }

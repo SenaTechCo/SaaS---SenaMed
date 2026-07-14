@@ -102,6 +102,10 @@ public class Clinic {
         return status;
     }
 
+    public void setStatus(ClinicStatus status) {
+        this.status = status;
+    }
+
     public String getTimezone() {
         return timezone;
     }
@@ -140,6 +144,10 @@ public class Clinic {
 
     public Integer getMaxDoctors() {
         return maxDoctors;
+    }
+
+    public void setMaxDoctors(Integer maxDoctors) {
+        this.maxDoctors = maxDoctors;
     }
 
     public String getLogoUrl() {

@@ -4,6 +4,8 @@ import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
 import com.senamed.backend.appointment.dto.AvailableSlotsResponse;
 import com.senamed.backend.appointment.dto.PublicClinicResponse;
+import com.senamed.backend.appointment.event.AppointmentCancelledEvent;
+import com.senamed.backend.appointment.event.AppointmentCreatedEvent;
 import com.senamed.backend.clinic.Clinic;
 import com.senamed.backend.clinic.ClinicRepository;
 import com.senamed.backend.common.AppointmentConflictException;
@@ -15,6 +17,7 @@ import com.senamed.backend.doctor.DoctorAvailabilityRepository;
 import com.senamed.backend.doctor.DoctorRepository;
 import com.senamed.backend.doctor.DoctorTimeOff;
 import com.senamed.backend.doctor.DoctorTimeOffRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,18 +56,21 @@ public class PublicSchedulingService {
     private final DoctorAvailabilityRepository availabilityRepository;
     private final DoctorTimeOffRepository timeOffRepository;
     private final AppointmentRepository appointmentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PublicSchedulingService(
             ClinicRepository clinicRepository,
             DoctorRepository doctorRepository,
             DoctorAvailabilityRepository availabilityRepository,
             DoctorTimeOffRepository timeOffRepository,
-            AppointmentRepository appointmentRepository) {
+            AppointmentRepository appointmentRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.clinicRepository = clinicRepository;
         this.doctorRepository = doctorRepository;
         this.availabilityRepository = availabilityRepository;
         this.timeOffRepository = timeOffRepository;
         this.appointmentRepository = appointmentRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -122,6 +128,7 @@ public class PublicSchedulingService {
                     "Este horário acabou de ser reservado por outro paciente. Por favor, escolha outro horário.");
         }
 
+        eventPublisher.publishEvent(new AppointmentCreatedEvent(appointment.getId()));
         return AppointmentResponse.from(appointment);
     }
 
@@ -147,6 +154,7 @@ public class PublicSchedulingService {
         }
 
         appointment.cancel();
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(appointment.getId()));
         return AppointmentResponse.from(appointment);
     }
 
