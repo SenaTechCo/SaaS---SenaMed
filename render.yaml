@@ -18,6 +18,8 @@ services:
     plan: free
     healthCheckPath: /actuator/health
     envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod # activates application-prod.properties (KAN-73: structured JSON logs)
       - key: DB_HOST
         sync: false # Neon connection details, e.g. ep-xxxx.us-east-2.aws.neon.tech
       - key: DB_PORT
