@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { apiFetch, ApiError } from '../lib/http';
-import type { CheckoutResponse, Plan, Subscription } from '../types/billing';
+import type { CheckoutResponse, Plan, Preapproval, PreapprovalCheckoutResponse, Subscription } from '../types/billing';
 import './dashboard-shared.css';
 
 const PERIOD_OPTIONS = [1, 3, 12];
@@ -28,12 +28,16 @@ export function PlanoPage() {
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [preapproval, setPreapproval] = useState<Preapproval | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedPeriod, setSelectedPeriod] = useState<Record<number, number>>({});
   const [checkingOutPlanId, setCheckingOutPlanId] = useState<number | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [preapprovalCheckingOutPlanId, setPreapprovalCheckingOutPlanId] = useState<number | null>(null);
+  const [preapprovalError, setPreapprovalError] = useState<string | null>(null);
+  const [isCancellingPreapproval, setIsCancellingPreapproval] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,13 +46,15 @@ export function PlanoPage() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const [plansList, currentSubscription] = await Promise.all([
+        const [plansList, currentSubscription, currentPreapproval] = await Promise.all([
           apiFetch<Plan[]>('/api/plans'),
           apiFetch<Subscription | undefined>('/api/subscriptions/me'),
+          apiFetch<Preapproval | undefined>('/api/subscriptions/preapproval/me'),
         ]);
         if (cancelled) return;
         setPlans(plansList);
         setSubscription(currentSubscription ?? null);
+        setPreapproval(currentPreapproval ?? null);
       } catch (err) {
         if (cancelled) return;
         setLoadError(err instanceof ApiError ? err.message : 'Não foi possível carregar os planos.');
@@ -76,6 +82,37 @@ export function PlanoPage() {
     } catch (err) {
       setCheckoutError(err instanceof ApiError ? err.message : 'Não foi possível iniciar o checkout.');
       setCheckingOutPlanId(null);
+    }
+  }
+
+  async function handlePreapprovalCheckout(planId: number) {
+    setPreapprovalError(null);
+    setPreapprovalCheckingOutPlanId(planId);
+    try {
+      const periodMonths = selectedPeriod[planId] ?? PERIOD_OPTIONS[0];
+      const response = await apiFetch<PreapprovalCheckoutResponse>('/api/subscriptions/preapproval', {
+        method: 'POST',
+        body: { planId, periodMonths },
+      });
+      window.location.href = response.checkoutUrl;
+    } catch (err) {
+      setPreapprovalError(err instanceof ApiError ? err.message : 'Não foi possível iniciar a assinatura recorrente.');
+      setPreapprovalCheckingOutPlanId(null);
+    }
+  }
+
+  async function handleCancelPreapproval() {
+    setPreapprovalError(null);
+    setIsCancellingPreapproval(true);
+    try {
+      const updated = await apiFetch<Preapproval | undefined>('/api/subscriptions/preapproval/me/cancel', {
+        method: 'POST',
+      });
+      setPreapproval(updated ?? null);
+    } catch (err) {
+      setPreapprovalError(err instanceof ApiError ? err.message : 'Não foi possível cancelar a assinatura recorrente.');
+    } finally {
+      setIsCancellingPreapproval(false);
     }
   }
 
@@ -115,7 +152,39 @@ export function PlanoPage() {
         </div>
       )}
 
+      {!isLoading && !loadError && preapproval && (
+        <div className="card">
+          <h3>Assinatura recorrente atual</h3>
+          <dl className="public-summary">
+            <dt>Plano</dt>
+            <dd>{preapproval.planName}</dd>
+            <dt>Status</dt>
+            <dd>{preapproval.status}</dd>
+            <dt>Período</dt>
+            <dd>{preapproval.periodMonths} {preapproval.periodMonths === 1 ? 'mês' : 'meses'}</dd>
+            {preapproval.currentPeriodEnd && (
+              <>
+                <dt>Próxima cobrança</dt>
+                <dd>{new Date(preapproval.currentPeriodEnd).toLocaleDateString('pt-BR')}</dd>
+              </>
+            )}
+          </dl>
+          {preapproval.status !== 'CANCELLED' && (
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              style={{ width: 'auto' }}
+              onClick={handleCancelPreapproval}
+              disabled={isCancellingPreapproval}
+            >
+              {isCancellingPreapproval ? 'Cancelando...' : 'Cancelar assinatura recorrente'}
+            </button>
+          )}
+        </div>
+      )}
+
       {checkoutError && <div className="form-error">{checkoutError}</div>}
+      {preapprovalError && <div className="form-error">{preapprovalError}</div>}
 
       {!isLoading && !loadError && (
         <div className="inline-actions" style={{ flexWrap: 'wrap', gap: '1rem' }}>
@@ -141,15 +210,27 @@ export function PlanoPage() {
                   ))}
                 </select>
               </div>
-              <button
-                type="button"
-                className="btn-primary btn-small"
-                style={{ width: 'auto' }}
-                onClick={() => handleCheckout(plan.id)}
-                disabled={checkingOutPlanId === plan.id}
-              >
-                {checkingOutPlanId === plan.id ? 'Redirecionando...' : 'Assinar'}
-              </button>
+              <div className="inline-actions" style={{ gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-primary btn-small"
+                  style={{ width: 'auto' }}
+                  onClick={() => handleCheckout(plan.id)}
+                  disabled={checkingOutPlanId === plan.id}
+                >
+                  {checkingOutPlanId === plan.id ? 'Redirecionando...' : 'Assinar'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  style={{ width: 'auto' }}
+                  onClick={() => handlePreapprovalCheckout(plan.id)}
+                  disabled={preapprovalCheckingOutPlanId === plan.id}
+                  title="Cobrança automática recorrente, sem precisar renovar manualmente"
+                >
+                  {preapprovalCheckingOutPlanId === plan.id ? 'Redirecionando...' : 'Assinatura recorrente'}
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -26,3 +26,25 @@ export interface CheckoutResponse {
   subscriptionId: number;
   checkoutUrl: string;
 }
+
+export type PreapprovalStatus = 'PENDING' | 'AUTHORIZED' | 'PAUSED' | 'CANCELLED';
+
+export interface Preapproval {
+  id: number;
+  planId: number;
+  planName: string;
+  status: PreapprovalStatus;
+  periodMonths: number;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+}
+
+export interface PreapprovalCheckoutPayload {
+  planId: number;
+  periodMonths: number;
+}
+
+export interface PreapprovalCheckoutResponse {
+  preapprovalId: number;
+  checkoutUrl: string;
+}
