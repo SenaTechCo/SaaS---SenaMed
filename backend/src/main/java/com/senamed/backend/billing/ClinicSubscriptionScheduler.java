@@ -10,7 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Automatic clinic blocking (RF-022/RN-007, RF-026). Three independently-callable transitions, run
@@ -31,14 +33,17 @@ public class ClinicSubscriptionScheduler {
 
     private final ClinicRepository clinicRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final PreapprovalRepository preapprovalRepository;
     private final int pastDueGraceDays;
 
     public ClinicSubscriptionScheduler(
             ClinicRepository clinicRepository,
             SubscriptionRepository subscriptionRepository,
+            PreapprovalRepository preapprovalRepository,
             @Value("${senamed.subscription.past-due-grace-days}") int pastDueGraceDays) {
         this.clinicRepository = clinicRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.preapprovalRepository = preapprovalRepository;
         this.pastDueGraceDays = pastDueGraceDays;
     }
 
@@ -57,7 +62,10 @@ public class ClinicSubscriptionScheduler {
 
     @Transactional
     public void markLapsedSubscriptionsPastDue() {
-        List<Long> clinicIds = subscriptionRepository.findActiveClinicIdsWithLapsedApprovedSubscription(Instant.now());
+        Instant now = Instant.now();
+        Set<Long> clinicIds = new HashSet<>();
+        clinicIds.addAll(subscriptionRepository.findActiveClinicIdsWithLapsedApprovedSubscription(now));
+        clinicIds.addAll(preapprovalRepository.findActiveClinicIdsWithLapsedAuthorizedPreapproval(now));
         if (clinicIds.isEmpty()) {
             return;
         }
@@ -67,7 +75,9 @@ public class ClinicSubscriptionScheduler {
     @Transactional
     public void blockOverdueClinics() {
         Instant cutoff = Instant.now().minus(pastDueGraceDays, ChronoUnit.DAYS);
-        List<Long> clinicIds = subscriptionRepository.findPastDueClinicIdsBeyondGrace(cutoff);
+        Set<Long> clinicIds = new HashSet<>();
+        clinicIds.addAll(subscriptionRepository.findPastDueClinicIdsBeyondGrace(cutoff));
+        clinicIds.addAll(preapprovalRepository.findPastDueClinicIdsBeyondGraceViaPreapproval(cutoff));
         if (clinicIds.isEmpty()) {
             return;
         }

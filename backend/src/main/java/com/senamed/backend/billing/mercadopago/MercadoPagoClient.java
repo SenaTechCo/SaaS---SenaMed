@@ -12,7 +12,18 @@ public interface MercadoPagoClient {
 
     /**
      * Re-fetches a payment's authoritative status directly from Mercado Pago's API (RN-014) -
-     * webhook notification payloads are never trusted on their own.
+     * webhook notification payloads are never trusted on their own. Also reused to confirm each
+     * individual recurring charge of a Preapproval, since MP's {@code subscription_authorized_payment}
+     * notifications reference a regular payment id fetchable the same way.
      */
     PaymentResult getPayment(String paymentId);
+
+    /** Creates a recurring Preapproval (a hosted, redirect-based recurring-authorization page). */
+    PreapprovalResult createPreapproval(CreatePreapprovalCommand command);
+
+    /** Re-fetches a preapproval's authoritative status directly from Mercado Pago's API (RN-014). */
+    PreapprovalStatusResult getPreapproval(String preapprovalId);
+
+    /** Cancels a preapproval directly at Mercado Pago. */
+    PreapprovalStatusResult cancelPreapproval(String preapprovalId);
 }

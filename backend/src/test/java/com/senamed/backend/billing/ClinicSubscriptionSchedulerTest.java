@@ -78,10 +78,44 @@ class ClinicSubscriptionSchedulerTest extends AbstractIntegrationTest {
                 .isEqualTo("PAST_DUE");
     }
 
+    @Test
+    void markLapsedSubscriptionsPastDue_movesActiveClinicWithExpiredPreapprovalToPastDue() {
+        Long clinicId = registerClinicAndGetId("Clinica Preapproval Vencido", "admin@preapprovalvencido.com");
+        Long planId = jdbcTemplate.queryForObject("SELECT id FROM plans WHERE name = 'Básico'", Long.class);
+        jdbcTemplate.update("UPDATE clinics SET status = 'ACTIVE' WHERE id = ?", clinicId);
+        insertAuthorizedPreapproval(clinicId, planId, Instant.now().minus(1, ChronoUnit.DAYS));
+
+        scheduler.markLapsedSubscriptionsPastDue();
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM clinics WHERE id = ?", String.class, clinicId))
+                .isEqualTo("PAST_DUE");
+    }
+
+    @Test
+    void blockOverdueClinics_blocksPastDuePreapprovalClinicBeyondGraceWindow() {
+        Long clinicId = registerClinicAndGetId("Clinica Preapproval Atraso Longo", "admin@preapprovalatrasolongo.com");
+        Long planId = jdbcTemplate.queryForObject("SELECT id FROM plans WHERE name = 'Básico'", Long.class);
+        jdbcTemplate.update("UPDATE clinics SET status = 'PAST_DUE' WHERE id = ?", clinicId);
+        // Well beyond the default 3-day grace window.
+        insertAuthorizedPreapproval(clinicId, planId, Instant.now().minus(10, ChronoUnit.DAYS));
+
+        scheduler.blockOverdueClinics();
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM clinics WHERE id = ?", String.class, clinicId))
+                .isEqualTo("BLOCKED");
+    }
+
     private void insertApprovedSubscription(Long clinicId, Long planId, Instant currentPeriodEnd) {
         jdbcTemplate.update(
                 "INSERT INTO subscriptions (clinic_id, plan_id, status, period_months, current_period_start, current_period_end) "
                         + "VALUES (?, ?, 'APPROVED', 1, ?, ?)",
+                clinicId, planId, Timestamp.from(currentPeriodEnd.minus(30, ChronoUnit.DAYS)), Timestamp.from(currentPeriodEnd));
+    }
+
+    private void insertAuthorizedPreapproval(Long clinicId, Long planId, Instant currentPeriodEnd) {
+        jdbcTemplate.update(
+                "INSERT INTO preapprovals (clinic_id, plan_id, status, period_months, current_period_start, current_period_end) "
+                        + "VALUES (?, ?, 'AUTHORIZED', 1, ?, ?)",
                 clinicId, planId, Timestamp.from(currentPeriodEnd.minus(30, ChronoUnit.DAYS)), Timestamp.from(currentPeriodEnd));
     }
 

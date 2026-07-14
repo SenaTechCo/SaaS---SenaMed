@@ -5,7 +5,10 @@ import com.senamed.backend.auth.dto.AuthResponse;
 import com.senamed.backend.auth.dto.RegisterClinicRequest;
 import com.senamed.backend.billing.dto.CheckoutRequest;
 import com.senamed.backend.billing.dto.CheckoutResponse;
+import com.senamed.backend.billing.dto.CreatePreapprovalRequest;
+import com.senamed.backend.billing.dto.PreapprovalCheckoutResponse;
 import com.senamed.backend.billing.mercadopago.MercadoPagoClient;
+import com.senamed.backend.billing.mercadopago.PreapprovalResult;
 import com.senamed.backend.billing.mercadopago.PreferenceResult;
 import com.senamed.backend.common.ApiError;
 import org.junit.jupiter.api.Test;
@@ -66,5 +69,17 @@ class ClinicStatusInterceptorTest extends AbstractIntegrationTest {
                 url("/api/subscriptions/checkout"), HttpMethod.POST,
                 new HttpEntity<>(new CheckoutRequest(planId, 1), headers), CheckoutResponse.class);
         assertThat(checkoutResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        ResponseEntity<String> preapprovalMeResponse = restTemplate.exchange(
+                url("/api/subscriptions/preapproval/me"), HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        assertThat(preapprovalMeResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        jdbcTemplate.update("UPDATE clinics SET email = 'contato@bloqueada.com' WHERE id = ?", clinicId);
+        when(mercadoPagoClient.createPreapproval(any()))
+                .thenReturn(new PreapprovalResult("preap-block", "https://mp.example/preapproval"));
+        ResponseEntity<PreapprovalCheckoutResponse> preapprovalCheckoutResponse = restTemplate.exchange(
+                url("/api/subscriptions/preapproval"), HttpMethod.POST,
+                new HttpEntity<>(new CreatePreapprovalRequest(planId, 1), headers), PreapprovalCheckoutResponse.class);
+        assertThat(preapprovalCheckoutResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 }

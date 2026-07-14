@@ -39,7 +39,7 @@ public abstract class AbstractIntegrationTest {
         // permanently remove the 3 seed rows before the very first test.
         jdbcTemplate.execute(
                 "TRUNCATE TABLE appointments, doctor_time_off, doctor_availability, doctors, users, "
-                        + "clinics, subscriptions RESTART IDENTITY CASCADE");
+                        + "clinics, subscriptions, preapproval_charges, preapprovals RESTART IDENTITY CASCADE");
     }
 
     protected String url(String path) {

@@ -1,6 +1,9 @@
 package com.senamed.backend.billing.mercadopago;
 
 import com.senamed.backend.billing.mercadopago.dto.PaymentApiResponse;
+import com.senamed.backend.billing.mercadopago.dto.PreapprovalApiResponse;
+import com.senamed.backend.billing.mercadopago.dto.PreapprovalRequest;
+import com.senamed.backend.billing.mercadopago.dto.PreapprovalStatusUpdateRequest;
 import com.senamed.backend.billing.mercadopago.dto.PreferenceApiResponse;
 import com.senamed.backend.billing.mercadopago.dto.PreferenceRequest;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,6 +69,62 @@ public class MercadoPagoRestClient implements MercadoPagoClient {
             return new PaymentResult(paymentId, response.status(), response.externalReference());
         } catch (RestClientException ex) {
             throw new MercadoPagoIntegrationException("Falha ao confirmar pagamento " + paymentId + " no Mercado Pago", ex);
+        }
+    }
+
+    @Override
+    public PreapprovalResult createPreapproval(CreatePreapprovalCommand command) {
+        PreapprovalRequest request = new PreapprovalRequest(
+                command.reason(),
+                command.externalReference(),
+                command.payerEmail(),
+                command.backUrl(),
+                command.notificationUrl(),
+                new PreapprovalRequest.AutoRecurring(
+                        command.frequencyMonths(), "months", command.transactionAmount(), "BRL"));
+
+        try {
+            PreapprovalApiResponse response = restClient.post()
+                    .uri("/preapproval")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .body(request)
+                    .retrieve()
+                    .body(PreapprovalApiResponse.class);
+
+            return new PreapprovalResult(response.id(), response.initPoint());
+        } catch (RestClientException ex) {
+            throw new MercadoPagoIntegrationException("Falha ao criar assinatura recorrente no Mercado Pago", ex);
+        }
+    }
+
+    @Override
+    public PreapprovalStatusResult getPreapproval(String preapprovalId) {
+        try {
+            PreapprovalApiResponse response = restClient.get()
+                    .uri("/preapproval/{id}", preapprovalId)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(PreapprovalApiResponse.class);
+
+            return new PreapprovalStatusResult(preapprovalId, response.status(), response.externalReference());
+        } catch (RestClientException ex) {
+            throw new MercadoPagoIntegrationException("Falha ao confirmar assinatura recorrente " + preapprovalId + " no Mercado Pago", ex);
+        }
+    }
+
+    @Override
+    public PreapprovalStatusResult cancelPreapproval(String preapprovalId) {
+        try {
+            PreapprovalApiResponse response = restClient.put()
+                    .uri("/preapproval/{id}", preapprovalId)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .body(new PreapprovalStatusUpdateRequest("cancelled"))
+                    .retrieve()
+                    .body(PreapprovalApiResponse.class);
+
+            return new PreapprovalStatusResult(preapprovalId, response.status(), response.externalReference());
+        } catch (RestClientException ex) {
+            throw new MercadoPagoIntegrationException("Falha ao cancelar assinatura recorrente " + preapprovalId + " no Mercado Pago", ex);
         }
     }
 }
