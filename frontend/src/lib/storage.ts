@@ -34,6 +34,10 @@ export function setStoredSession(token: string, user: User, clinic: Clinic): voi
   localStorage.setItem(CLINIC_KEY, JSON.stringify(clinic));
 }
 
+export function setStoredClinic(clinic: Clinic): void {
+  localStorage.setItem(CLINIC_KEY, JSON.stringify(clinic));
+}
+
 export function clearStoredSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);

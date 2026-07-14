@@ -46,4 +46,5 @@ export interface Appointment {
   patientName: string;
   status: AppointmentStatus;
   cancelToken: string;
+  confirmedAt: string | null;
 }

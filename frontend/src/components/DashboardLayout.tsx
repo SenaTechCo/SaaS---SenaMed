@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './DashboardLayout.css';
 
@@ -9,11 +10,41 @@ function navLinkClassName({ isActive }: { isActive: boolean }): string {
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { clinic, user, logout } = useAuth();
+  const { clinic, user, logout, refreshClinic } = useAuth();
+
+  useEffect(() => {
+    refreshClinic().catch(() => {
+      // Best-effort refresh - the stale-but-present clinic from login is still usable if this fails.
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleLogout() {
     logout();
     navigate('/login', { replace: true });
+  }
+
+  function renderStatusBanner() {
+    if (!clinic || clinic.status === 'ACTIVE') return null;
+
+    if (clinic.status === 'TRIAL') {
+      const daysLeft = clinic.trialEndsAt
+        ? Math.max(0, Math.ceil((new Date(clinic.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+        : null;
+      return (
+        <div className="dashboard-banner dashboard-banner-info">
+          Você está no período de teste{daysLeft !== null ? ` — restam ${daysLeft} dia(s)` : ''}.{' '}
+          <Link to="/dashboard/plano">Ver planos</Link>
+        </div>
+      );
+    }
+
+    const label = clinic.status === 'PAST_DUE' ? 'com pagamento atrasado' : 'bloqueada';
+    return (
+      <div className="dashboard-banner dashboard-banner-warning">
+        Sua assinatura está {label}. <Link to="/dashboard/plano">Regularizar agora</Link>
+      </div>
+    );
   }
 
   return (
@@ -32,12 +63,20 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </button>
       </header>
 
+      {renderStatusBanner()}
+
       <nav className="dashboard-nav">
         <NavLink to="/dashboard" end className={navLinkClassName}>
           Início
         </NavLink>
         <NavLink to="/dashboard/medicos" className={navLinkClassName}>
           Médicos
+        </NavLink>
+        <NavLink to="/dashboard/consultas" className={navLinkClassName}>
+          Consultas
+        </NavLink>
+        <NavLink to="/dashboard/plano" className={navLinkClassName}>
+          Plano
         </NavLink>
         <NavLink to="/dashboard/personalizacao" className={navLinkClassName}>
           Personalização

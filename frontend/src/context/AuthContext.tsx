@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthResponse, Clinic, User } from '../types/auth';
+import { apiFetch } from '../lib/http';
 import {
   clearStoredSession,
   getStoredClinic,
   getStoredToken,
   getStoredUser,
+  setStoredClinic,
   setStoredSession,
 } from '../lib/storage';
 
@@ -16,6 +18,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (auth: AuthResponse) => void;
   logout: () => void;
+  refreshClinic: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -39,6 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setClinic(null);
   }, []);
 
+  const refreshClinic = useCallback(async () => {
+    const fresh = await apiFetch<Clinic>('/api/clinics/me');
+    setStoredClinic(fresh);
+    setClinic(fresh);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
@@ -47,8 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!token,
       login,
       logout,
+      refreshClinic,
     }),
-    [token, user, clinic, login, logout],
+    [token, user, clinic, login, logout, refreshClinic],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

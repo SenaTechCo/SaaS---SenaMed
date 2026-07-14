@@ -67,3 +67,25 @@
   padding: 32px;
   color: #374151;
 }
+
+.dashboard-banner {
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dashboard-banner a {
+  font-weight: 700;
+  text-decoration: underline;
+  color: inherit;
+}
+
+.dashboard-banner-info {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.dashboard-banner-warning {
+  background: #fef2f2;
+  color: #991b1b;
+}
