@@ -1,5 +1,10 @@
 import { getStoredToken } from './storage';
 
+// Empty by default so relative "/api/..." paths keep working via Vite's dev-server proxy
+// (vite.config.ts) locally. In production the frontend (Vercel) and backend (Render) are on
+// different origins, so Vercel must set VITE_API_BASE_URL to the backend's public URL at build time.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -41,7 +46,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(API_BASE_URL + path, {
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,

@@ -1,0 +1,66 @@
+# Render Blueprint (KAN-70/72) - defines the backend web service and its managed Postgres in one
+# file. Import this at https://dashboard.render.com/blueprints ("New Blueprint Instance") pointing
+# at this repo; Render reads this file automatically from the repo root.
+#
+# `sync: false` env vars are intentionally left blank here (secrets/environment-specific values are
+# never committed) - Render will prompt for each one in the dashboard on first deploy.
+databases:
+  - name: senamed-postgres
+    databaseName: senamed
+    user: senamed
+    plan: free
+    # ATTENTION (KAN-72): the free plan has NO automatic backups and is deleted after 90 days of
+    # inactivity/age - it's only for validating the deploy. Before a real launch, change this to
+    # `plan: starter` (~$7/mo) for daily automatic backups + point-in-time recovery, or wire up a
+    # separate pg_dump-based backup job if staying on the free tier long-term.
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: senamed-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: senamed-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: senamed-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: senamed-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: senamed-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: senamed-postgres
+          property: password
+      - key: SENAMED_JWT_SECRET
+        generateValue: true
+      - key: SENAMED_CORS_ORIGINS
+        sync: false # the Vercel frontend URL, e.g. https://senamed.vercel.app
+      - key: SENAMED_FRONTEND_BASE_URL
+        sync: false # same Vercel URL - used to build links in emails and Mercado Pago back_urls
+      - key: SENAMED_BACKEND_BASE_URL
+        sync: false # this service's own public URL, e.g. https://senamed-backend.onrender.com
+      - key: SENAMED_MAIL_HOST
+        sync: false
+      - key: SENAMED_MAIL_PORT
+        sync: false
+      - key: SENAMED_MAIL_USERNAME
+        sync: false
+      - key: SENAMED_MAIL_PASSWORD
+        sync: false
+      - key: SENAMED_MAIL_FROM
+        sync: false
+      - key: SENAMED_MP_ACCESS_TOKEN
+        sync: false
