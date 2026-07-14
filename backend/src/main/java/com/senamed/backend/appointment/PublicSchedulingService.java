@@ -18,6 +18,7 @@ import com.senamed.backend.doctor.DoctorRepository;
 import com.senamed.backend.doctor.DoctorTimeOff;
 import com.senamed.backend.doctor.DoctorTimeOffRepository;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -120,10 +121,15 @@ public class PublicSchedulingService {
                 startsAt, endsAt, Instant.now());
         try {
             appointment = appointmentRepository.saveAndFlush(appointment);
-        } catch (DataIntegrityViolationException ex) {
+        } catch (DataIntegrityViolationException | ConcurrencyFailureException ex) {
             // The database's exclusion constraint (see V3 migration) is the real, race-proof
             // guarantee against double-booking; this only catches the rare case where two
-            // requests for the exact same slot both pass the check above concurrently.
+            // requests for the exact same slot both pass the check above concurrently. Under high
+            // concurrency Postgres can report this either as a clean exclusion-constraint violation
+            // (DataIntegrityViolationException) or, since checking a GiST exclusion constraint takes
+            // its own locks, as a deadlock between two competing inserts
+            // (ConcurrencyFailureException/CannotAcquireLockException) - both mean the same thing
+            // from the caller's perspective: someone else won the race for this slot.
             throw new AppointmentConflictException(
                     "Este horário acabou de ser reservado por outro paciente. Por favor, escolha outro horário.");
         }
