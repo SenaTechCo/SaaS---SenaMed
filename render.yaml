@@ -1,49 +1,35 @@
-# Render Blueprint (KAN-70/72) - defines the backend web service and its managed Postgres in one
-# file. Import this at https://dashboard.render.com/blueprints ("New Blueprint Instance") pointing
-# at this repo; Render reads this file automatically from the repo root.
+# Render Blueprint (KAN-70) - defines the backend web service. Import this at
+# https://dashboard.render.com/blueprints ("New Blueprint Instance") pointing at this repo; Render
+# reads this file automatically from the repo root.
+#
+# Postgres is NOT hosted on Render (its managed Postgres, even on the free plan, requires a credit
+# card on file) - it runs on Neon (https://neon.tech), a free serverless Postgres that doesn't
+# require a card. Fill in DB_HOST/DB_NAME/DB_USER/DB_PASSWORD below with your Neon connection
+# details after creating the project there.
 #
 # `sync: false` env vars are intentionally left blank here (secrets/environment-specific values are
 # never committed) - Render will prompt for each one in the dashboard on first deploy.
-databases:
-  - name: senamed-postgres
-    databaseName: senamed
-    user: senamed
-    plan: free
-    # ATTENTION (KAN-72): the free plan has NO automatic backups and is deleted after 90 days of
-    # inactivity/age - it's only for validating the deploy. Before a real launch, change this to
-    # `plan: starter` (~$7/mo) for daily automatic backups + point-in-time recovery, or wire up a
-    # separate pg_dump-based backup job if staying on the free tier long-term.
-    postgresMajorVersion: "16"
-
 services:
   - type: web
     name: senamed-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter
+    plan: free
     healthCheckPath: /actuator/health
     envVars:
       - key: DB_HOST
-        fromDatabase:
-          name: senamed-postgres
-          property: host
+        sync: false # Neon connection details, e.g. ep-xxxx.us-east-2.aws.neon.tech
       - key: DB_PORT
-        fromDatabase:
-          name: senamed-postgres
-          property: port
+        value: "5432"
       - key: DB_NAME
-        fromDatabase:
-          name: senamed-postgres
-          property: database
+        sync: false
       - key: DB_USER
-        fromDatabase:
-          name: senamed-postgres
-          property: user
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase:
-          name: senamed-postgres
-          property: password
+        sync: false
+      - key: DB_SSL_MODE
+        value: require # Neon requires SSL; local/docker-compose Postgres does not (see application.properties)
       - key: SENAMED_JWT_SECRET
         generateValue: true
       - key: SENAMED_CORS_ORIGINS
