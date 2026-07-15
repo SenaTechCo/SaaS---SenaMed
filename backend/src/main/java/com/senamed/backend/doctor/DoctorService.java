@@ -13,6 +13,7 @@ import com.senamed.backend.doctor.dto.DoctorUpdateRequest;
 import com.senamed.backend.doctor.dto.TimeOffRequest;
 import com.senamed.backend.doctor.dto.TimeOffResponse;
 import com.senamed.backend.tenant.TenantContext;
+import com.senamed.backend.user.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,16 +34,19 @@ public class DoctorService {
     private final DoctorAvailabilityRepository availabilityRepository;
     private final DoctorTimeOffRepository timeOffRepository;
     private final ClinicRepository clinicRepository;
+    private final UserRepository userRepository;
 
     public DoctorService(
             DoctorRepository doctorRepository,
             DoctorAvailabilityRepository availabilityRepository,
             DoctorTimeOffRepository timeOffRepository,
-            ClinicRepository clinicRepository) {
+            ClinicRepository clinicRepository,
+            UserRepository userRepository) {
         this.doctorRepository = doctorRepository;
         this.availabilityRepository = availabilityRepository;
         this.timeOffRepository = timeOffRepository;
         this.clinicRepository = clinicRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -59,19 +63,19 @@ public class DoctorService {
 
         Doctor doctor = new Doctor(clinic, request.name(), request.specialty(), request.email(), request.phone());
         doctor = doctorRepository.save(doctor);
-        return DoctorResponse.from(doctor);
+        return toResponse(doctor);
     }
 
     @Transactional(readOnly = true)
     public List<DoctorResponse> listAll() {
         return doctorRepository.findAllByClinicIdOrderByNameAsc(TenantContext.currentClinicId()).stream()
-                .map(DoctorResponse::from)
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public DoctorResponse getOne(Long id) {
-        return DoctorResponse.from(loadOwnedDoctor(id));
+        return toResponse(loadOwnedDoctor(id));
     }
 
     @Transactional
@@ -81,7 +85,7 @@ public class DoctorService {
         doctor.setSpecialty(request.specialty());
         doctor.setEmail(request.email());
         doctor.setPhone(request.phone());
-        return DoctorResponse.from(doctor);
+        return toResponse(doctor);
     }
 
     /** Soft delete (RF-00x): sets {@code active = false}, the row is never removed. */
@@ -160,5 +164,27 @@ public class DoctorService {
     private Doctor loadOwnedDoctor(Long id) {
         return doctorRepository.findByIdAndClinicId(id, TenantContext.currentClinicId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + id));
+    }
+
+    private DoctorResponse toResponse(Doctor doctor) {
+        return DoctorResponse.from(doctor, userRepository.existsByDoctorId(doctor.getId()));
+    }
+
+    /** Own read-only profile for a DOCTOR-role caller (KAN-77). */
+    @Transactional(readOnly = true)
+    public DoctorResponse getMyProfile() {
+        return toResponse(loadOwnedDoctor(TenantContext.currentDoctorId()));
+    }
+
+    /** Own read-only weekly availability for a DOCTOR-role caller (KAN-77). */
+    @Transactional(readOnly = true)
+    public List<AvailabilityResponse> listMyAvailability() {
+        return listAvailability(TenantContext.currentDoctorId());
+    }
+
+    /** Own read-only time-off periods for a DOCTOR-role caller (KAN-77). */
+    @Transactional(readOnly = true)
+    public List<TimeOffResponse> listMyTimeOff() {
+        return listTimeOff(TenantContext.currentDoctorId());
     }
 }

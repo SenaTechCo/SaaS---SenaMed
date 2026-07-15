@@ -1,5 +1,6 @@
 package com.senamed.backend.tenant;
 
+import com.senamed.backend.common.DoctorAccessRequiredException;
 import com.senamed.backend.security.AuthenticatedUser;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +34,20 @@ public final class TenantContext {
      */
     public static Long currentClinicId() {
         return currentUser().clinicId();
+    }
+
+    /**
+     * @return the doctor id of the currently authenticated user.
+     * @throws DoctorAccessRequiredException if the caller has no doctorId claim (e.g. an ADMIN
+     * token calling a {@code /api/doctors/me/**} endpoint) - mapped to 403 by
+     * {@code GlobalExceptionHandler}, not a NullPointerException.
+     */
+    public static Long currentDoctorId() {
+        Long doctorId = currentUser().doctorId();
+        if (doctorId == null) {
+            throw new DoctorAccessRequiredException();
+        }
+        return doctorId;
     }
 
     public static boolean isAuthenticated() {

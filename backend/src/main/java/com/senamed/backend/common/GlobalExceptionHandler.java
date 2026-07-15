@@ -62,6 +62,18 @@ public class GlobalExceptionHandler {
                         "Não foi possível se comunicar com o Mercado Pago no momento. Tente novamente em instantes."));
     }
 
+    @ExceptionHandler(DoctorAccessRequiredException.class)
+    public ResponseEntity<ApiError> handleDoctorAccessRequired(DoctorAccessRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiError.of(HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DoctorAccessAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleDoctorAccessAlreadyExists(DoctorAccessAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

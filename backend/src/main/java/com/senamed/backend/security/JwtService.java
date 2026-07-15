@@ -23,7 +23,8 @@ import java.util.Optional;
  *   "sub": "<userId>",
  *   "clinicId": <clinicId>,
  *   "email": "<email>",
- *   "role": "<ADMIN|...>",
+ *   "role": "<ADMIN|DOCTOR>",
+ *   "doctorId": <doctorId>,   // only present for DOCTOR-role users
  *   "iat": ...,
  *   "exp": ...
  * }
@@ -46,13 +47,17 @@ public class JwtService {
         this.expiration = Duration.ofMinutes(expirationMinutes);
     }
 
-    public String generateToken(Long userId, Long clinicId, String email, String role) {
+    public String generateToken(Long userId, Long clinicId, String email, String role, Long doctorId) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("clinicId", clinicId)
                 .claim("email", email)
-                .claim("role", role)
+                .claim("role", role);
+        if (doctorId != null) {
+            builder.claim("doctorId", doctorId);
+        }
+        return builder
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key)
@@ -75,7 +80,9 @@ public class JwtService {
             Long clinicId = claims.get("clinicId", Number.class).longValue();
             String email = claims.get("email", String.class);
             String role = claims.get("role", String.class);
-            return Optional.of(new AuthenticatedUser(userId, clinicId, email, role));
+            Number doctorIdClaim = claims.get("doctorId", Number.class);
+            Long doctorId = doctorIdClaim != null ? doctorIdClaim.longValue() : null;
+            return Optional.of(new AuthenticatedUser(userId, clinicId, email, role, doctorId));
         } catch (JwtException | IllegalArgumentException | NullPointerException e) {
             return Optional.empty();
         }

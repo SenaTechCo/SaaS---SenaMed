@@ -18,4 +18,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     /** Backs the authenticated "dashboard de consultas" listing (RF-018). */
     List<Appointment> findAllByClinicIdOrderByStartsAtAsc(Long clinicId);
+
+    /** Backs the doctor's own-agenda view (KAN-77): a doctor's own appointments within their clinic. */
+    List<Appointment> findAllByClinicIdAndDoctorIdOrderByStartsAtAsc(Long clinicId, Long doctorId);
 }

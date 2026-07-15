@@ -11,9 +11,10 @@ public record DoctorResponse(
         String email,
         String phone,
         boolean active,
-        Instant createdAt) {
+        Instant createdAt,
+        boolean hasLoginAccess) {
 
-    public static DoctorResponse from(Doctor doctor) {
+    public static DoctorResponse from(Doctor doctor, boolean hasLoginAccess) {
         return new DoctorResponse(
                 doctor.getId(),
                 doctor.getName(),
@@ -21,6 +22,7 @@ public record DoctorResponse(
                 doctor.getEmail(),
                 doctor.getPhone(),
                 doctor.isActive(),
-                doctor.getCreatedAt());
+                doctor.getCreatedAt(),
+                hasLoginAccess);
     }
 }

@@ -26,4 +26,14 @@ public class AppointmentService {
                 .map(AppointmentResponse::from)
                 .toList();
     }
+
+    /** Own-agenda listing for a DOCTOR-role caller (KAN-77). */
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> listMine() {
+        Long clinicId = TenantContext.currentClinicId();
+        Long doctorId = TenantContext.currentDoctorId();
+        return appointmentRepository.findAllByClinicIdAndDoctorIdOrderByStartsAtAsc(clinicId, doctorId).stream()
+                .map(AppointmentResponse::from)
+                .toList();
+    }
 }

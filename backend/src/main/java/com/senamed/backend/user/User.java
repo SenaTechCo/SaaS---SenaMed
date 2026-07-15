@@ -1,6 +1,7 @@
 package com.senamed.backend.user;
 
 import com.senamed.backend.clinic.Clinic;
+import com.senamed.backend.doctor.Doctor;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -54,6 +55,10 @@ public class User {
     @Column(nullable = false)
     private UserRole role = UserRole.ADMIN;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doctor_id", nullable = true, updatable = false)
+    private Doctor doctor;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -62,11 +67,16 @@ public class User {
     }
 
     public User(Clinic clinic, String name, String email, String passwordHash, UserRole role) {
+        this(clinic, name, email, passwordHash, role, null);
+    }
+
+    public User(Clinic clinic, String name, String email, String passwordHash, UserRole role, Doctor doctor) {
         this.clinic = clinic;
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
         this.role = role;
+        this.doctor = doctor;
     }
 
     public Long getId() {
@@ -91,6 +101,10 @@ public class User {
 
     public UserRole getRole() {
         return role;
+    }
+
+    public Doctor getDoctor() {
+        return doctor;
     }
 
     public Instant getCreatedAt() {

@@ -2,9 +2,11 @@ package com.senamed.backend.doctor;
 
 import com.senamed.backend.doctor.dto.AvailabilityRequest;
 import com.senamed.backend.doctor.dto.AvailabilityResponse;
+import com.senamed.backend.doctor.dto.DoctorAccessResponse;
 import com.senamed.backend.doctor.dto.DoctorCreateRequest;
 import com.senamed.backend.doctor.dto.DoctorResponse;
 import com.senamed.backend.doctor.dto.DoctorUpdateRequest;
+import com.senamed.backend.doctor.dto.GrantDoctorAccessRequest;
 import com.senamed.backend.doctor.dto.TimeOffRequest;
 import com.senamed.backend.doctor.dto.TimeOffResponse;
 import jakarta.validation.Valid;
@@ -26,9 +28,11 @@ import java.util.List;
 public class DoctorController {
 
     private final DoctorService doctorService;
+    private final DoctorAccessService doctorAccessService;
 
-    public DoctorController(DoctorService doctorService) {
+    public DoctorController(DoctorService doctorService, DoctorAccessService doctorAccessService) {
         this.doctorService = doctorService;
+        this.doctorAccessService = doctorAccessService;
     }
 
     @PostMapping
@@ -79,5 +83,17 @@ public class DoctorController {
     @GetMapping("/{id}/time-off")
     public List<TimeOffResponse> listTimeOff(@PathVariable("id") Long doctorId) {
         return doctorService.listTimeOff(doctorId);
+    }
+
+    @PostMapping("/{id}/access")
+    public ResponseEntity<DoctorAccessResponse> grantAccess(
+            @PathVariable Long id, @Valid @RequestBody GrantDoctorAccessRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(doctorAccessService.grantAccess(id, request));
+    }
+
+    @DeleteMapping("/{id}/access")
+    public ResponseEntity<Void> revokeAccess(@PathVariable Long id) {
+        doctorAccessService.revokeAccess(id);
+        return ResponseEntity.noContent().build();
     }
 }
