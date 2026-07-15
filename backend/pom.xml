@@ -31,6 +31,9 @@
 		<jjwt.version>0.12.6</jjwt.version>
 		<testcontainers.version>1.20.4</testcontainers.version>
 		<bucket4j.version>8.10.1</bucket4j.version>
+		<google-api-client.version>2.8.0</google-api-client.version>
+		<google-api-services-calendar.version>v3-rev20260517-2.0.0</google-api-services-calendar.version>
+		<google-oauth-client.version>1.39.0</google-oauth-client.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -79,6 +82,26 @@
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j-core</artifactId>
 			<version>${bucket4j.version}</version>
+		</dependency>
+
+		<!-- Google Calendar sync (KAN-78): per-doctor OAuth2 authorization-code flow + Calendar API
+		     calls on their behalf. Not spring-boot-starter-oauth2-client - that starter is built for
+		     "login with Google" (the app's own users authenticating), not a background service
+		     holding many doctors' stored refresh tokens and calling an API on their behalf later. -->
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>${google-api-client.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-calendar</artifactId>
+			<version>${google-api-services-calendar.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.oauth-client</groupId>
+			<artifactId>google-oauth-client</artifactId>
+			<version>${google-oauth-client.version}</version>
 		</dependency>
 
 		<!-- JWT support -->

@@ -38,7 +38,8 @@ public abstract class AbstractIntegrationTest {
         // not per-test data; Flyway only runs once against the test DB, so wiping it here would
         // permanently remove the 3 seed rows before the very first test.
         jdbcTemplate.execute(
-                "TRUNCATE TABLE appointments, doctor_time_off, doctor_availability, doctors, users, "
+                "TRUNCATE TABLE appointment_calendar_sync_jobs, doctor_google_calendar_credentials, "
+                        + "appointments, doctor_time_off, doctor_availability, doctors, users, "
                         + "clinics, subscriptions, preapproval_charges, preapprovals RESTART IDENTITY CASCADE");
     }
 

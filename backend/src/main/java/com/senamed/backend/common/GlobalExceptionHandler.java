@@ -1,6 +1,7 @@
 package com.senamed.backend.common;
 
 import com.senamed.backend.billing.mercadopago.MercadoPagoIntegrationException;
+import com.senamed.backend.googlecalendar.GoogleCalendarIntegrationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -72,6 +73,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleDoctorAccessAlreadyExists(DoctorAccessAlreadyExistsException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(GoogleCalendarIntegrationException.class)
+    public ResponseEntity<ApiError> handleGoogleCalendarIntegration(GoogleCalendarIntegrationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiError.of(HttpStatus.BAD_GATEWAY.value(), "Bad Gateway",
+                        "Não foi possível se comunicar com o Google Calendar no momento. Tente novamente em instantes."));
     }
 
     @ExceptionHandler(AuthenticationException.class)
