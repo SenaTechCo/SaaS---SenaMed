@@ -69,18 +69,35 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <NavLink to="/dashboard" end className={navLinkClassName}>
           Início
         </NavLink>
-        <NavLink to="/dashboard/medicos" className={navLinkClassName}>
-          Médicos
-        </NavLink>
-        <NavLink to="/dashboard/consultas" className={navLinkClassName}>
-          Consultas
-        </NavLink>
-        <NavLink to="/dashboard/plano" className={navLinkClassName}>
-          Plano
-        </NavLink>
-        <NavLink to="/dashboard/personalizacao" className={navLinkClassName}>
-          Personalização
-        </NavLink>
+        {user?.role === 'ADMIN' && (
+          <>
+            <NavLink to="/dashboard/medicos" className={navLinkClassName}>
+              Médicos
+            </NavLink>
+            <NavLink to="/dashboard/consultas" className={navLinkClassName}>
+              Consultas
+            </NavLink>
+            <NavLink to="/dashboard/plano" className={navLinkClassName}>
+              Plano
+            </NavLink>
+            <NavLink to="/dashboard/personalizacao" className={navLinkClassName}>
+              Personalização
+            </NavLink>
+          </>
+        )}
+        {user?.role === 'DOCTOR' && (
+          <>
+            <NavLink to="/dashboard/minha-agenda" className={navLinkClassName}>
+              Minha Agenda
+            </NavLink>
+            <NavLink to="/dashboard/minha-disponibilidade" className={navLinkClassName}>
+              Minha Disponibilidade
+            </NavLink>
+            <NavLink to="/dashboard/minhas-folgas" className={navLinkClassName}>
+              Minhas Folgas
+            </NavLink>
+          </>
+        )}
       </nav>
 
       <main className="dashboard-content">{children}</main>

@@ -7,11 +7,14 @@ export interface Clinic {
   trialEndsAt: string;
 }
 
+export type UserRole = 'ADMIN' | 'DOCTOR';
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
+  doctorId: string | null;
 }
 
 export interface AuthResponse {

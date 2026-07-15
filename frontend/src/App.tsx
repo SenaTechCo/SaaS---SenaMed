@@ -11,6 +11,9 @@ import { PublicClinicPage } from './pages/PublicClinicPage';
 import { CancelAppointmentPage } from './pages/CancelAppointmentPage';
 import { ConfirmAppointmentPage } from './pages/ConfirmAppointmentPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
+import { MyAgendaPage } from './pages/MyAgendaPage';
+import { MyAvailabilityPage } from './pages/MyAvailabilityPage';
+import { MyTimeOffPage } from './pages/MyTimeOffPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -33,7 +36,7 @@ function App() {
       <Route
         path="/dashboard/medicos"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <DoctorsPage />
           </ProtectedRoute>
         }
@@ -41,7 +44,7 @@ function App() {
       <Route
         path="/dashboard/medicos/:id/horarios"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <DoctorAvailabilityPage />
           </ProtectedRoute>
         }
@@ -49,7 +52,7 @@ function App() {
       <Route
         path="/dashboard/medicos/:id/folgas"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <DoctorTimeOffPage />
           </ProtectedRoute>
         }
@@ -57,7 +60,7 @@ function App() {
       <Route
         path="/dashboard/consultas"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <AppointmentsPage />
           </ProtectedRoute>
         }
@@ -65,7 +68,7 @@ function App() {
       <Route
         path="/dashboard/plano"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <PlanoPage />
           </ProtectedRoute>
         }
@@ -73,8 +76,32 @@ function App() {
       <Route
         path="/dashboard/personalizacao"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <ClinicCustomizationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/minha-agenda"
+        element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <MyAgendaPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/minha-disponibilidade"
+        element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <MyAvailabilityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/minhas-folgas"
+        element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <MyTimeOffPage />
           </ProtectedRoute>
         }
       />

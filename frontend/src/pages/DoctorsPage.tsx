@@ -3,12 +3,13 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { apiFetch, ApiError } from '../lib/http';
-import type { Doctor, DoctorPayload } from '../types/doctor';
+import type { Doctor, DoctorAccessResponse, DoctorPayload, GrantDoctorAccessPayload } from '../types/doctor';
 import type { ClinicProfile } from '../types/clinic';
 import './auth-pages.css';
 import './dashboard-shared.css';
 
 const emptyForm: DoctorPayload = { name: '', specialty: '', email: '', phone: '' };
+const emptyAccessForm: GrantDoctorAccessPayload = { email: '', password: '' };
 
 export function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -28,6 +29,12 @@ export function DoctorsPage() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
+
+  const [grantingAccessId, setGrantingAccessId] = useState<string | null>(null);
+  const [accessForm, setAccessForm] = useState<GrantDoctorAccessPayload>(emptyAccessForm);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [isSavingAccess, setIsSavingAccess] = useState(false);
+  const [revokingAccessId, setRevokingAccessId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,6 +129,55 @@ export function DoctorsPage() {
       setEditError(err instanceof ApiError ? err.message : 'Não foi possível salvar as alterações.');
     } finally {
       setIsSavingEdit(false);
+    }
+  }
+
+  function openGrantAccessForm(doctorId: string) {
+    setAccessForm(emptyAccessForm);
+    setAccessError(null);
+    setGrantingAccessId(doctorId);
+  }
+
+  function cancelGrantAccess() {
+    setGrantingAccessId(null);
+    setAccessError(null);
+  }
+
+  async function handleGrantAccess(event: FormEvent<HTMLFormElement>, doctorId: string) {
+    event.preventDefault();
+    setAccessError(null);
+    setIsSavingAccess(true);
+    try {
+      await apiFetch<DoctorAccessResponse>(`/api/doctors/${doctorId}/access`, {
+        method: 'POST',
+        body: accessForm,
+      });
+      setDoctors((prev) => prev.map((d) => (d.id === doctorId ? { ...d, hasLoginAccess: true } : d)));
+      setGrantingAccessId(null);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setAccessError(err.message || 'Este médico já possui acesso ou o e-mail já está em uso.');
+      } else {
+        setAccessError(err instanceof ApiError ? err.message : 'Não foi possível conceder acesso.');
+      }
+    } finally {
+      setIsSavingAccess(false);
+    }
+  }
+
+  async function handleRevokeAccess(doctor: Doctor) {
+    setRowError(null);
+    const confirmed = window.confirm(`Revogar o acesso de login do médico "${doctor.name}"?`);
+    if (!confirmed) return;
+
+    setRevokingAccessId(doctor.id);
+    try {
+      await apiFetch<void>(`/api/doctors/${doctor.id}/access`, { method: 'DELETE' });
+      setDoctors((prev) => prev.map((d) => (d.id === doctor.id ? { ...d, hasLoginAccess: false } : d)));
+    } catch (err) {
+      setRowError(err instanceof ApiError ? err.message : 'Não foi possível revogar o acesso.');
+    } finally {
+      setRevokingAccessId(null);
     }
   }
 
@@ -242,6 +298,7 @@ export function DoctorsPage() {
                 <th>Especialidade</th>
                 <th>Contato</th>
                 <th>Status</th>
+                <th>Acesso</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -249,7 +306,7 @@ export function DoctorsPage() {
               {doctors.map((doctor) =>
                 editingId === doctor.id ? (
                   <tr key={doctor.id}>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       {editError && <div className="form-error">{editError}</div>}
                       <form onSubmit={(e) => handleSaveEdit(e, doctor.id)} noValidate>
                         <div className="form-inline-row">
@@ -310,6 +367,50 @@ export function DoctorsPage() {
                       </form>
                     </td>
                   </tr>
+                ) : grantingAccessId === doctor.id ? (
+                  <tr key={doctor.id}>
+                    <td colSpan={6}>
+                      {accessError && <div className="form-error">{accessError}</div>}
+                      <form onSubmit={(e) => handleGrantAccess(e, doctor.id)} noValidate>
+                        <div className="form-inline-row">
+                          <div className="form-field">
+                            <label htmlFor={`access-email-${doctor.id}`}>E-mail de login</label>
+                            <input
+                              id={`access-email-${doctor.id}`}
+                              type="email"
+                              value={accessForm.email}
+                              onChange={(e) => setAccessForm((f) => ({ ...f, email: e.target.value }))}
+                              required
+                            />
+                          </div>
+                          <div className="form-field">
+                            <label htmlFor={`access-password-${doctor.id}`}>Senha inicial</label>
+                            <input
+                              id={`access-password-${doctor.id}`}
+                              type="password"
+                              minLength={8}
+                              value={accessForm.password}
+                              onChange={(e) => setAccessForm((f) => ({ ...f, password: e.target.value }))}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="inline-actions">
+                          <button
+                            type="submit"
+                            className="btn-primary btn-small"
+                            style={{ width: 'auto' }}
+                            disabled={isSavingAccess}
+                          >
+                            {isSavingAccess ? 'Salvando...' : 'Conceder acesso'}
+                          </button>
+                          <button type="button" className="btn-secondary" onClick={cancelGrantAccess}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
                 ) : (
                   <tr key={doctor.id}>
                     <td>{doctor.name}</td>
@@ -325,6 +426,11 @@ export function DoctorsPage() {
                       </span>
                     </td>
                     <td>
+                      <span className={`badge ${doctor.hasLoginAccess ? 'badge-active' : 'badge-inactive'}`}>
+                        {doctor.hasLoginAccess ? 'Concedido' : 'Não concedido'}
+                      </span>
+                    </td>
+                    <td>
                       <div className="inline-actions">
                         <Link className="btn-link" to={`/dashboard/medicos/${doctor.id}/horarios`}>
                           Horários
@@ -335,6 +441,20 @@ export function DoctorsPage() {
                         <button type="button" className="btn-link" onClick={() => startEdit(doctor)}>
                           Editar
                         </button>
+                        {doctor.hasLoginAccess ? (
+                          <button
+                            type="button"
+                            className="btn-danger"
+                            onClick={() => handleRevokeAccess(doctor)}
+                            disabled={revokingAccessId === doctor.id}
+                          >
+                            {revokingAccessId === doctor.id ? 'Revogando...' : 'Revogar acesso'}
+                          </button>
+                        ) : (
+                          <button type="button" className="btn-link" onClick={() => openGrantAccessForm(doctor.id)}>
+                            Conceder acesso
+                          </button>
+                        )}
                         {doctor.active && (
                           <button
                             type="button"

@@ -7,6 +7,18 @@ export interface Doctor {
   email: string;
   phone: string;
   active: boolean;
+  hasLoginAccess: boolean;
+}
+
+export interface GrantDoctorAccessPayload {
+  email: string;
+  password: string;
+}
+
+export interface DoctorAccessResponse {
+  userId: string;
+  doctorId: string;
+  email: string;
 }
 
 export interface DoctorPayload {
