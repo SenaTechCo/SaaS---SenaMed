@@ -22,10 +22,15 @@ public class AppointmentMessageProcessor {
 
     private final AppointmentMessageRepository messageRepository;
     private final AppointmentMailSender mailSender;
+    private final AppointmentWhatsAppSender whatsAppSender;
 
-    public AppointmentMessageProcessor(AppointmentMessageRepository messageRepository, AppointmentMailSender mailSender) {
+    public AppointmentMessageProcessor(
+            AppointmentMessageRepository messageRepository,
+            AppointmentMailSender mailSender,
+            AppointmentWhatsAppSender whatsAppSender) {
         this.messageRepository = messageRepository;
         this.mailSender = mailSender;
+        this.whatsAppSender = whatsAppSender;
     }
 
     @Transactional
@@ -41,10 +46,18 @@ public class AppointmentMessageProcessor {
         }
 
         try {
-            if (message.getType() == MessageType.CREATED_CONFIRMATION) {
-                mailSender.sendCreatedConfirmation(appointment);
+            if (message.getChannel() == NotificationChannel.EMAIL) {
+                if (message.getType() == MessageType.CREATED_CONFIRMATION) {
+                    mailSender.sendCreatedConfirmation(appointment);
+                } else {
+                    mailSender.sendReminder(appointment, message);
+                }
             } else {
-                mailSender.sendReminder(appointment, message);
+                if (message.getType() == MessageType.CREATED_CONFIRMATION) {
+                    whatsAppSender.sendCreatedConfirmation(appointment);
+                } else {
+                    whatsAppSender.sendReminder(appointment, message);
+                }
             }
             message.markSent(LocalDateTime.now());
         } catch (Exception ex) {

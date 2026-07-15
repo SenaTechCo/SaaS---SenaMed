@@ -20,9 +20,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * One row per email to send for an {@link Appointment} (an outbox), created by
+ * One row per notification to send for an {@link Appointment} (an outbox), created by
  * {@link AppointmentMessageService} in response to {@code AppointmentCreatedEvent}/
- * {@code AppointmentCancelledEvent} and processed by {@link AppointmentMessageScheduler}.
+ * {@code AppointmentCancelledEvent} and processed by {@link AppointmentMessageScheduler}. Each
+ * {@link NotificationChannel} (email, WhatsApp) gets its own row per {@link MessageType} - the
+ * scheduler/retry machinery is entirely channel-agnostic (KAN-79).
  *
  * <p>{@link #confirmationToken} is DB-generated (mirrors {@code Appointment.cancelToken}'s idiom)
  * and is unconditionally populated for every row, even though it is only ever used for
@@ -46,6 +48,10 @@ public class AppointmentMessage {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
     private MessageType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
+    private NotificationChannel channel;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -75,11 +81,13 @@ public class AppointmentMessage {
     }
 
     public AppointmentMessage(
-            Appointment appointment, MessageType type, LocalDateTime scheduledFor, LocalDateTime tokenExpiresAt) {
+            Appointment appointment, MessageType type, LocalDateTime scheduledFor, LocalDateTime tokenExpiresAt,
+            NotificationChannel channel) {
         this.appointment = appointment;
         this.type = type;
         this.scheduledFor = scheduledFor;
         this.tokenExpiresAt = tokenExpiresAt;
+        this.channel = channel;
     }
 
     public Long getId() {
@@ -92,6 +100,10 @@ public class AppointmentMessage {
 
     public MessageType getType() {
         return type;
+    }
+
+    public NotificationChannel getChannel() {
+        return channel;
     }
 
     public MessageStatus getStatus() {

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -45,12 +46,22 @@ public class AppointmentMessageService {
                 .orElseThrow(() -> new IllegalStateException("Appointment not found: " + event.appointmentId()));
 
         messageRepository.save(new AppointmentMessage(
-                appointment, MessageType.CREATED_CONFIRMATION, LocalDateTime.now(), null));
+                appointment, MessageType.CREATED_CONFIRMATION, LocalDateTime.now(), null, NotificationChannel.EMAIL));
 
         // RN-018: the confirm link stops making sense once the appointment time has passed.
         messageRepository.save(new AppointmentMessage(
                 appointment, MessageType.REMINDER_24H,
-                appointment.getStartsAt().minusHours(24), appointment.getStartsAt()));
+                appointment.getStartsAt().minusHours(24), appointment.getStartsAt(), NotificationChannel.EMAIL));
+
+        // WhatsApp (KAN-79) is a second channel for the same two messages - skipped entirely when
+        // the patient didn't provide a phone number, rather than creating a row that can never send.
+        if (StringUtils.hasText(appointment.getPatientPhone())) {
+            messageRepository.save(new AppointmentMessage(
+                    appointment, MessageType.CREATED_CONFIRMATION, LocalDateTime.now(), null, NotificationChannel.WHATSAPP));
+            messageRepository.save(new AppointmentMessage(
+                    appointment, MessageType.REMINDER_24H,
+                    appointment.getStartsAt().minusHours(24), appointment.getStartsAt(), NotificationChannel.WHATSAPP));
+        }
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

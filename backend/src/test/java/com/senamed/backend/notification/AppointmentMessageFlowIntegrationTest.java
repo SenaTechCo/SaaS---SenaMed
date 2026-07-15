@@ -19,6 +19,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import com.senamed.backend.notification.whatsapp.WhatsAppClient;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -51,6 +52,10 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
     @MockitoBean
     private JavaMailSender javaMailSender;
 
+    /** Only present to guarantee no real network call happens - this file doesn't test WhatsApp behavior. */
+    @MockitoBean
+    private WhatsAppClient whatsAppClient;
+
     private static final LocalDate FUTURE_DATE = LocalDate.now().plusDays(7);
     private static final int FUTURE_DAY_OF_WEEK = FUTURE_DATE.getDayOfWeek().getValue();
 
@@ -63,11 +68,13 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
         AppointmentResponse appointment = bookAppointment(doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Msg", "msg@paciente.com");
 
         List<String> types = jdbcTemplate.queryForList(
-                "SELECT type FROM appointment_messages WHERE appointment_id = ? ORDER BY type", String.class, appointment.id());
+                "SELECT type FROM appointment_messages WHERE appointment_id = ? AND channel = 'EMAIL' ORDER BY type",
+                String.class, appointment.id());
         assertThat(types).containsExactly("CREATED_CONFIRMATION", "REMINDER_24H");
 
         List<String> statuses = jdbcTemplate.queryForList(
-                "SELECT status FROM appointment_messages WHERE appointment_id = ?", String.class, appointment.id());
+                "SELECT status FROM appointment_messages WHERE appointment_id = ? AND channel = 'EMAIL'",
+                String.class, appointment.id());
         assertThat(statuses).containsOnly("PENDING");
 
         // Compared against appointments.starts_at read the same raw-JDBC way (rather than the
@@ -77,10 +84,10 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
         LocalDateTime startsAt = jdbcTemplate.queryForObject(
                 "SELECT starts_at FROM appointments WHERE id = ?", LocalDateTime.class, appointment.id());
         LocalDateTime reminderScheduledFor = jdbcTemplate.queryForObject(
-                "SELECT scheduled_for FROM appointment_messages WHERE appointment_id = ? AND type = 'REMINDER_24H'",
+                "SELECT scheduled_for FROM appointment_messages WHERE appointment_id = ? AND type = 'REMINDER_24H' AND channel = 'EMAIL'",
                 LocalDateTime.class, appointment.id());
         LocalDateTime reminderTokenExpiresAt = jdbcTemplate.queryForObject(
-                "SELECT token_expires_at FROM appointment_messages WHERE appointment_id = ? AND type = 'REMINDER_24H'",
+                "SELECT token_expires_at FROM appointment_messages WHERE appointment_id = ? AND type = 'REMINDER_24H' AND channel = 'EMAIL'",
                 LocalDateTime.class, appointment.id());
 
         assertThat(reminderScheduledFor).isEqualTo(startsAt.minusHours(24));
@@ -99,7 +106,8 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
                 url("/api/public/appointments/cancel/" + appointment.cancelToken()), null, AppointmentResponse.class);
 
         List<String> statuses = jdbcTemplate.queryForList(
-                "SELECT status FROM appointment_messages WHERE appointment_id = ?", String.class, appointment.id());
+                "SELECT status FROM appointment_messages WHERE appointment_id = ? AND channel = 'EMAIL'",
+                String.class, appointment.id());
         assertThat(statuses).containsOnly("CANCELLED");
     }
 
@@ -181,7 +189,7 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
 
         verify(javaMailSender, times(1)).send(any(SimpleMailMessage.class));
         String status = jdbcTemplate.queryForObject(
-                "SELECT status FROM appointment_messages WHERE appointment_id = ? AND type = 'CREATED_CONFIRMATION'",
+                "SELECT status FROM appointment_messages WHERE appointment_id = ? AND type = 'CREATED_CONFIRMATION' AND channel = 'EMAIL'",
                 String.class, appointment.id());
         assertThat(status).isEqualTo("SENT");
     }
@@ -200,7 +208,7 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
         }
 
         Map<String, Object> row = jdbcTemplate.queryForMap(
-                "SELECT status, attempts FROM appointment_messages WHERE appointment_id = ? AND type = 'CREATED_CONFIRMATION'",
+                "SELECT status, attempts FROM appointment_messages WHERE appointment_id = ? AND type = 'CREATED_CONFIRMATION' AND channel = 'EMAIL'",
                 appointment.id());
         assertThat(row.get("attempts")).isEqualTo(5);
         assertThat(row.get("status")).isEqualTo("FAILED");
@@ -208,7 +216,7 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
 
     private UUID reminderTokenFor(Long appointmentId) {
         return jdbcTemplate.queryForObject(
-                "SELECT confirmation_token FROM appointment_messages WHERE appointment_id = ? AND type = 'REMINDER_24H'",
+                "SELECT confirmation_token FROM appointment_messages WHERE appointment_id = ? AND type = 'REMINDER_24H' AND channel = 'EMAIL'",
                 UUID.class, appointmentId);
     }
 
