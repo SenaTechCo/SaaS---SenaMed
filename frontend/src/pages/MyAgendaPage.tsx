@@ -8,13 +8,18 @@ export function MyAgendaPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSlow, setIsSlow] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setIsSlow(true);
+    }, 8000);
 
     async function load() {
       setIsLoading(true);
       setLoadError(null);
+      setIsSlow(false);
       try {
         const list = await apiFetch<Appointment[]>('/api/doctors/me/appointments');
         if (cancelled) return;
@@ -30,6 +35,7 @@ export function MyAgendaPage() {
     load();
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
     };
   }, []);
 
@@ -42,7 +48,16 @@ export function MyAgendaPage() {
         </div>
       </div>
 
-      {isLoading && <p className="loading-state">Carregando consultas...</p>}
+      {isLoading && (
+        <>
+          <p className="loading-state">Carregando consultas...</p>
+          {isSlow && (
+            <p className="loading-state">
+              Isso está demorando mais que o esperado — o servidor pode estar iniciando, aguarde alguns segundos.
+            </p>
+          )}
+        </>
+      )}
       {loadError && <div className="form-error">{loadError}</div>}
 
       {!isLoading && !loadError && (

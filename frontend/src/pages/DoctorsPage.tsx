@@ -16,6 +16,7 @@ export function DoctorsPage() {
   const [maxDoctors, setMaxDoctors] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSlow, setIsSlow] = useState(false);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState<DoctorPayload>(emptyForm);
@@ -38,10 +39,14 @@ export function DoctorsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setIsSlow(true);
+    }, 8000);
 
     async function load() {
       setIsLoading(true);
       setLoadError(null);
+      setIsSlow(false);
       try {
         const [doctorsList, clinicProfile] = await Promise.all([
           apiFetch<Doctor[]>('/api/doctors'),
@@ -61,6 +66,7 @@ export function DoctorsPage() {
     load();
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
     };
   }, []);
 
@@ -283,7 +289,16 @@ export function DoctorsPage() {
         </div>
       )}
 
-      {isLoading && <p className="loading-state">Carregando médicos...</p>}
+      {isLoading && (
+        <>
+          <p className="loading-state">Carregando médicos...</p>
+          {isSlow && (
+            <p className="loading-state">
+              Isso está demorando mais que o esperado — o servidor pode estar iniciando, aguarde alguns segundos.
+            </p>
+          )}
+        </>
+      )}
       {loadError && <div className="form-error">{loadError}</div>}
       {rowError && <div className="form-error">{rowError}</div>}
 

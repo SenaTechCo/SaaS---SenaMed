@@ -64,10 +64,10 @@ public class Appointment extends TenantScopedEntity {
     @Column(name = "patient_phone")
     private String patientPhone;
 
-    @Column(name = "starts_at", nullable = false, updatable = false)
+    @Column(name = "starts_at", nullable = false)
     private LocalDateTime startsAt;
 
-    @Column(name = "ends_at", nullable = false, updatable = false)
+    @Column(name = "ends_at", nullable = false)
     private LocalDateTime endsAt;
 
     @Enumerated(EnumType.STRING)
@@ -169,6 +169,12 @@ public class Appointment extends TenantScopedEntity {
 
     public void cancel() {
         this.status = AppointmentStatus.CANCELLED;
+    }
+
+    /** Staff-initiated reschedule from the dashboard (KAN-97) - changes the slot, keeps the doctor/patient. */
+    public void reschedule(LocalDateTime startsAt, LocalDateTime endsAt) {
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
     }
 
     /** Records the patient's attendance confirmation (RF-016) - orthogonal to {@link #status}. */

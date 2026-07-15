@@ -179,3 +179,30 @@
   color: #6b7280;
   font-size: 14px;
 }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-tile {
+  background: #fff;
+  border: 1px solid #e2e2e6;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.stat-tile .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+}
+
+.stat-tile .stat-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}

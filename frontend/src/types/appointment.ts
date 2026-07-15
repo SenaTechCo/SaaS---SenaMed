@@ -33,6 +33,11 @@ export interface AppointmentPayload {
   lgpdConsent: boolean;
 }
 
+export interface AppointmentReschedulePayload {
+  date: string;
+  startTime: string;
+}
+
 export type AppointmentStatus = 'CONFIRMED' | 'CANCELLED';
 
 export interface Appointment {
