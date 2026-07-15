@@ -96,6 +96,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <NavLink to="/dashboard/minhas-folgas" className={navLinkClassName}>
               Minhas Folgas
             </NavLink>
+            <NavLink to="/dashboard/google-calendar" className={navLinkClassName}>
+              Google Calendar
+            </NavLink>
           </>
         )}
       </nav>

@@ -14,6 +14,7 @@ import { AppointmentsPage } from './pages/AppointmentsPage';
 import { MyAgendaPage } from './pages/MyAgendaPage';
 import { MyAvailabilityPage } from './pages/MyAvailabilityPage';
 import { MyTimeOffPage } from './pages/MyTimeOffPage';
+import { GoogleCalendarPage } from './pages/GoogleCalendarPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -102,6 +103,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['DOCTOR']}>
             <MyTimeOffPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/google-calendar"
+        element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <GoogleCalendarPage />
           </ProtectedRoute>
         }
       />
