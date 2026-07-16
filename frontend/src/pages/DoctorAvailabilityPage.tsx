@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { apiFetch, ApiError } from '../lib/http';
 import type { AvailabilitySlot, AvailabilitySlotPayload, DayOfWeek, Doctor } from '../types/doctor';
-import './auth-pages.css';
-import './dashboard-shared.css';
-import './DoctorAvailabilityPage.css';
 
 const DAYS: { value: DayOfWeek; label: string }[] = [
   { value: 1, label: 'Segunda' },
@@ -126,66 +124,96 @@ export function DoctorAvailabilityPage() {
 
   return (
     <DashboardLayout>
-      <Link className="back-link" to="/dashboard/medicos">
-        ← Voltar para médicos
+      <Link
+        className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium mb-4"
+        to="/dashboard/medicos"
+      >
+        <ArrowLeft className="w-4 h-4" /> Voltar para médicos
       </Link>
 
-      <div className="page-header">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h2>Horários de atendimento{doctor ? ` — ${doctor.name}` : ''}</h2>
-          <p className="subtitle">Defina as janelas de disponibilidade semanal por dia da semana.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Horários de atendimento{doctor ? ` — ${doctor.name}` : ''}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">Defina as janelas de disponibilidade semanal por dia da semana.</p>
         </div>
       </div>
 
-      {isLoading && <p className="loading-state">Carregando horários...</p>}
-      {loadError && <div className="form-error">{loadError}</div>}
+      {isLoading && (
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">{loadError}</div>
+      )}
 
       {!isLoading && !loadError && (
         <>
-          {saveError && <div className="form-error">{saveError}</div>}
-          {saveSuccess && <div className="form-success">Horários salvos com sucesso.</div>}
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">{saveError}</div>
+          )}
+          {saveSuccess && (
+            <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-6">
+              Horários salvos com sucesso.
+            </div>
+          )}
 
-          <div className="availability-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {DAYS.map((day) => {
               const daySlots = slots.filter((slot) => slot.dayOfWeek === day.value);
               return (
-                <div className="availability-day card" key={day.value}>
-                  <h3>{day.label}</h3>
-                  {daySlots.length === 0 && <p className="empty-state">Sem horários</p>}
-                  {daySlots.map((slot) => (
-                    <div className="availability-slot" key={slot.key}>
-                      <input
-                        type="time"
-                        value={slot.startTime}
-                        onChange={(e) => updateSlot(slot.key, 'startTime', e.target.value)}
-                        aria-label={`Início ${day.label}`}
-                      />
-                      <span>até</span>
-                      <input
-                        type="time"
-                        value={slot.endTime}
-                        onChange={(e) => updateSlot(slot.key, 'endTime', e.target.value)}
-                        aria-label={`Fim ${day.label}`}
-                      />
-                      <button
-                        type="button"
-                        className="btn-danger btn-small"
-                        onClick={() => removeSlot(slot.key)}
-                        aria-label={`Remover horário de ${day.label}`}
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  ))}
-                  <button type="button" className="btn-link" onClick={() => addSlot(day.value)}>
-                    + Adicionar horário
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4" key={day.value}>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">{day.label}</h3>
+                  {daySlots.length === 0 && <p className="text-slate-500 text-sm mb-3">Sem horários</p>}
+                  <div className="space-y-2 mb-3">
+                    {daySlots.map((slot) => (
+                      <div className="flex items-center gap-2" key={slot.key}>
+                        <input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) => updateSlot(slot.key, 'startTime', e.target.value)}
+                          aria-label={`Início ${day.label}`}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                        />
+                        <span className="text-slate-400 text-sm">até</span>
+                        <input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) => updateSlot(slot.key, 'endTime', e.target.value)}
+                          aria-label={`Fim ${day.label}`}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSlot(slot.key)}
+                          aria-label={`Remover horário de ${day.label}`}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addSlot(day.value)}
+                    className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Adicionar horário
                   </button>
                 </div>
               );
             })}
           </div>
 
-          <button type="button" className="btn-primary btn-small" style={{ width: 'auto' }} onClick={handleSave} disabled={isSaving}>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 text-sm disabled:opacity-50"
+          >
             {isSaving ? 'Salvando...' : 'Salvar horários'}
           </button>
         </>

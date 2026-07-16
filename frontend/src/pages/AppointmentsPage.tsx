@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { CalendarDays, Plus, X } from 'lucide-react';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { apiFetch, ApiError } from '../lib/http';
 import type { Appointment, AppointmentPayload, AppointmentReschedulePayload } from '../types/appointment';
 import type { Doctor } from '../types/doctor';
-import './dashboard-shared.css';
 
 function todayAsInputValue(): string {
   const now = new Date();
@@ -178,228 +178,323 @@ export function AppointmentsPage() {
     }
   }
 
+  const reschedulingAppointment =
+    reschedulingId !== null ? appointments.find((a) => a.id === reschedulingId) : undefined;
+
   return (
     <DashboardLayout>
-      <div className="page-header">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h2>Consultas</h2>
-          <p className="subtitle">Todas as consultas agendadas da clínica.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Consultas</h1>
+          <p className="text-sm text-slate-500 mt-1">Todas as consultas agendadas da clínica.</p>
         </div>
-        <button type="button" className="btn-primary btn-small" style={{ width: 'auto' }} onClick={openCreateForm}>
-          Nova consulta
+        <button
+          type="button"
+          onClick={openCreateForm}
+          className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 text-sm w-full sm:w-auto"
+        >
+          <Plus className="w-4 h-4" /> Nova consulta
         </button>
       </div>
 
-      {showCreateForm && (
-        <div className="card">
-          <h3>Cadastrar consulta</h3>
-          {createError && <div className="form-error">{createError}</div>}
-          <form onSubmit={handleCreate} noValidate>
-            <div className="form-inline-row">
-              <div className="form-field">
-                <label htmlFor="create-doctor">Médico</label>
-                <select
-                  id="create-doctor"
-                  value={createForm.doctorId}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, doctorId: e.target.value }))}
-                  required
-                >
-                  <option value="" disabled>Selecione um médico</option>
-                  {activeDoctors.map((doctor) => (
-                    <option key={doctor.id} value={doctor.id}>{doctor.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-field">
-                <label htmlFor="create-date">Data</label>
-                <input
-                  id="create-date"
-                  type="date"
-                  min={todayAsInputValue()}
-                  value={createForm.date}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, date: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="create-time">Horário</label>
-                <input
-                  id="create-time"
-                  type="time"
-                  value={createForm.startTime}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, startTime: e.target.value }))}
-                  required
-                />
-              </div>
-            </div>
-            <div className="form-inline-row">
-              <div className="form-field">
-                <label htmlFor="create-patient-name">Nome do paciente</label>
-                <input
-                  id="create-patient-name"
-                  type="text"
-                  value={createForm.patientName}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, patientName: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="create-patient-email">E-mail do paciente</label>
-                <input
-                  id="create-patient-email"
-                  type="email"
-                  value={createForm.patientEmail}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, patientEmail: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="create-patient-phone">Telefone (opcional)</label>
-                <input
-                  id="create-patient-phone"
-                  type="tel"
-                  value={createForm.patientPhone}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, patientPhone: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <label className="lgpd-consent">
-              <input
-                type="checkbox"
-                checked={createForm.lgpdConsent}
-                onChange={(e) => setCreateForm((f) => ({ ...f, lgpdConsent: e.target.checked }))}
-              />
-              Paciente autorizou o uso dos seus dados para fins de agendamento, conforme a LGPD.
-            </label>
-
-            <div className="inline-actions">
-              <button
-                type="submit"
-                className="btn-primary btn-small"
-                style={{ width: 'auto' }}
-                disabled={isCreating || !createForm.lgpdConsent}
-              >
-                {isCreating ? 'Salvando...' : 'Salvar'}
-              </button>
-              <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
       {isLoading && (
-        <>
-          <p className="loading-state">Carregando consultas...</p>
+        <div className="flex flex-col items-center gap-3 py-24">
+          <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           {isSlow && (
-            <p className="loading-state">
+            <p className="text-sm text-slate-500 text-center">
               Isso está demorando mais que o esperado — o servidor pode estar iniciando, aguarde alguns segundos.
             </p>
           )}
-        </>
+        </div>
       )}
-      {loadError && <div className="form-error">{loadError}</div>}
-      {rowError && <div className="form-error">{rowError}</div>}
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">{loadError}</div>
+      )}
+      {rowError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">{rowError}</div>
+      )}
 
       {!isLoading && !loadError && (
-        appointments.length === 0 ? (
-          <p className="empty-state">Nenhuma consulta agendada ainda.</p>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Paciente</th>
-                <th>Médico</th>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Status</th>
-                <th>Confirmado</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((appointment) =>
-                reschedulingId === appointment.id ? (
-                  <tr key={appointment.id}>
-                    <td colSpan={7}>
-                      {rescheduleError && <div className="form-error">{rescheduleError}</div>}
-                      <form onSubmit={(e) => handleSaveReschedule(e, appointment.id)} noValidate>
-                        <div className="form-inline-row">
-                          <div className="form-field">
-                            <label htmlFor={`reschedule-date-${appointment.id}`}>Nova data</label>
-                            <input
-                              id={`reschedule-date-${appointment.id}`}
-                              type="date"
-                              min={todayAsInputValue()}
-                              value={rescheduleForm.date}
-                              onChange={(e) => setRescheduleForm((f) => ({ ...f, date: e.target.value }))}
-                              required
-                            />
-                          </div>
-                          <div className="form-field">
-                            <label htmlFor={`reschedule-time-${appointment.id}`}>Novo horário</label>
-                            <input
-                              id={`reschedule-time-${appointment.id}`}
-                              type="time"
-                              value={rescheduleForm.startTime}
-                              onChange={(e) => setRescheduleForm((f) => ({ ...f, startTime: e.target.value }))}
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div className="inline-actions">
-                          <button
-                            type="submit"
-                            className="btn-primary btn-small"
-                            style={{ width: 'auto' }}
-                            disabled={isSavingReschedule}
-                          >
-                            {isSavingReschedule ? 'Salvando...' : 'Salvar'}
-                          </button>
-                          <button type="button" className="btn-secondary" onClick={cancelReschedule}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </form>
-                    </td>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.06)] overflow-hidden">
+          {appointments.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <CalendarDays className="w-6 h-6 text-slate-400" />
+                </div>
+                <p className="text-slate-500 text-sm">Nenhuma consulta agendada ainda.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px]">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-100">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paciente</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Médico</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Data</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Horário</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Confirmado</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ações</th>
                   </tr>
-                ) : (
-                  <tr key={appointment.id}>
-                    <td>{appointment.patientName}</td>
-                    <td>{appointment.doctorName}</td>
-                    <td>{appointment.date}</td>
-                    <td>{appointment.startTime} — {appointment.endTime}</td>
-                    <td>
-                      <span className={`badge ${appointment.status === 'CONFIRMED' ? 'badge-active' : 'badge-inactive'}`}>
-                        {appointment.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado'}
-                      </span>
-                    </td>
-                    <td>{appointment.confirmedAt ? 'Sim' : 'Não'}</td>
-                    <td>
-                      {appointment.status === 'CONFIRMED' && (
-                        <div className="inline-actions">
-                          <button type="button" className="btn-link" onClick={() => startReschedule(appointment)}>
-                            Reagendar
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-danger"
-                            onClick={() => handleCancel(appointment)}
-                            disabled={cancellingId === appointment.id}
-                          >
-                            {cancellingId === appointment.id ? 'Cancelando...' : 'Cancelar'}
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ),
+                </thead>
+                <tbody>
+                  {appointments.map((appointment) => (
+                    <tr key={appointment.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80 transition-colors">
+                      <td className="px-5 py-3.5 text-sm text-slate-700 font-medium">{appointment.patientName}</td>
+                      <td className="px-5 py-3.5 text-sm text-slate-700">{appointment.doctorName}</td>
+                      <td className="px-5 py-3.5 text-sm text-slate-700">{appointment.date}</td>
+                      <td className="px-5 py-3.5 text-sm text-slate-700">
+                        {appointment.startTime} — {appointment.endTime}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm">
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            appointment.status === 'CONFIRMED' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {appointment.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-slate-700">{appointment.confirmedAt ? 'Sim' : 'Não'}</td>
+                      <td className="px-5 py-3.5 text-sm">
+                        {appointment.status === 'CONFIRMED' && (
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => startReschedule(appointment)}
+                              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                            >
+                              Reagendar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCancel(appointment)}
+                              disabled={cancellingId === appointment.id}
+                              className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                            >
+                              {cancellingId === appointment.id ? 'Cancelando...' : 'Cancelar'}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-slate-900">Cadastrar consulta</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} noValidate className="p-6 space-y-4">
+              {createError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{createError}</div>
               )}
-            </tbody>
-          </table>
-        )
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="create-doctor" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Médico
+                  </label>
+                  <select
+                    id="create-doctor"
+                    value={createForm.doctorId}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, doctorId: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  >
+                    <option value="" disabled>
+                      Selecione um médico
+                    </option>
+                    {activeDoctors.map((doctor) => (
+                      <option key={doctor.id} value={doctor.id}>
+                        {doctor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="create-date" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Data
+                  </label>
+                  <input
+                    id="create-date"
+                    type="date"
+                    min={todayAsInputValue()}
+                    value={createForm.date}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, date: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-time" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Horário
+                  </label>
+                  <input
+                    id="create-time"
+                    type="time"
+                    value={createForm.startTime}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, startTime: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-patient-name" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Nome do paciente
+                  </label>
+                  <input
+                    id="create-patient-name"
+                    type="text"
+                    value={createForm.patientName}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, patientName: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-patient-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    E-mail do paciente
+                  </label>
+                  <input
+                    id="create-patient-email"
+                    type="email"
+                    value={createForm.patientEmail}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, patientEmail: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-patient-phone" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Telefone (opcional)
+                  </label>
+                  <input
+                    id="create-patient-phone"
+                    type="tel"
+                    value={createForm.patientPhone}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, patientPhone: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+
+                <label className="col-span-1 sm:col-span-2 flex items-start gap-2 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={createForm.lgpdConsent}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, lgpdConsent: e.target.checked }))}
+                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-200"
+                  />
+                  Paciente autorizou o uso dos seus dados para fins de agendamento, conforme a LGPD.
+                </label>
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreating || !createForm.lgpdConsent}
+                  className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 shadow-sm disabled:opacity-50 transition-all"
+                >
+                  {isCreating ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {reschedulingId !== null && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Reagendar consulta{reschedulingAppointment ? ` — ${reschedulingAppointment.patientName}` : ''}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={cancelReschedule}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={(e) => handleSaveReschedule(e, reschedulingId)} noValidate className="p-6 space-y-4">
+              {rescheduleError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{rescheduleError}</div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="reschedule-date" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Nova data
+                  </label>
+                  <input
+                    id="reschedule-date"
+                    type="date"
+                    min={todayAsInputValue()}
+                    value={rescheduleForm.date}
+                    onChange={(e) => setRescheduleForm((f) => ({ ...f, date: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reschedule-time" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Novo horário
+                  </label>
+                  <input
+                    id="reschedule-time"
+                    type="time"
+                    value={rescheduleForm.startTime}
+                    onChange={(e) => setRescheduleForm((f) => ({ ...f, startTime: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={cancelReschedule}
+                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingReschedule}
+                  className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 shadow-sm disabled:opacity-50 transition-all"
+                >
+                  {isSavingReschedule ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </DashboardLayout>
   );

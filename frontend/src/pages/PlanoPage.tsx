@@ -3,22 +3,21 @@ import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { apiFetch, ApiError } from '../lib/http';
 import type { CheckoutResponse, Plan, Preapproval, PreapprovalCheckoutResponse, Subscription } from '../types/billing';
-import './dashboard-shared.css';
 
 const PERIOD_OPTIONS = [1, 3, 12];
 
 const STATUS_MESSAGES: Record<string, { text: string; className: string }> = {
   success: {
     text: 'Pagamento em processamento. Assim que o Mercado Pago confirmar, seu plano será ativado automaticamente.',
-    className: 'form-success',
+    className: 'bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-6',
   },
   pending: {
     text: 'Pagamento pendente de confirmação pelo Mercado Pago.',
-    className: 'form-success',
+    className: 'bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-6',
   },
   failure: {
     text: 'O pagamento não foi aprovado. Você pode tentar novamente.',
-    className: 'form-error',
+    className: 'bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6',
   },
 };
 
@@ -120,32 +119,42 @@ export function PlanoPage() {
 
   return (
     <DashboardLayout>
-      <div className="page-header">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h2>Plano</h2>
-          <p className="subtitle">Escolha ou renove o plano da sua clínica.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Plano</h1>
+          <p className="text-sm text-slate-500 mt-1">Escolha ou renove o plano da sua clínica.</p>
         </div>
       </div>
 
       {statusMessage && <div className={statusMessage.className}>{statusMessage.text}</div>}
 
-      {isLoading && <p className="loading-state">Carregando planos...</p>}
-      {loadError && <div className="form-error">{loadError}</div>}
+      {isLoading && (
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">
+          {loadError}
+        </div>
+      )}
 
       {!isLoading && !loadError && subscription && (
-        <div className="card">
-          <h3>Assinatura atual</h3>
-          <dl className="public-summary">
-            <dt>Plano</dt>
-            <dd>{subscription.planName}</dd>
-            <dt>Status</dt>
-            <dd>{subscription.status}</dd>
-            <dt>Período</dt>
-            <dd>{subscription.periodMonths} {subscription.periodMonths === 1 ? 'mês' : 'meses'}</dd>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.06)] p-6 mb-6">
+          <h3 className="text-base font-semibold text-slate-900 mb-4">Assinatura atual</h3>
+          <dl>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plano</dt>
+            <dd className="text-sm text-slate-900 mb-3">{subscription.planName}</dd>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</dt>
+            <dd className="text-sm text-slate-900 mb-3">{subscription.status}</dd>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Período</dt>
+            <dd className="text-sm text-slate-900 mb-3">
+              {subscription.periodMonths} {subscription.periodMonths === 1 ? 'mês' : 'meses'}
+            </dd>
             {subscription.currentPeriodEnd && (
               <>
-                <dt>Válido até</dt>
-                <dd>{new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}</dd>
+                <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Válido até</dt>
+                <dd className="text-sm text-slate-900">{new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}</dd>
               </>
             )}
           </dl>
@@ -153,27 +162,28 @@ export function PlanoPage() {
       )}
 
       {!isLoading && !loadError && preapproval && (
-        <div className="card">
-          <h3>Assinatura recorrente atual</h3>
-          <dl className="public-summary">
-            <dt>Plano</dt>
-            <dd>{preapproval.planName}</dd>
-            <dt>Status</dt>
-            <dd>{preapproval.status}</dd>
-            <dt>Período</dt>
-            <dd>{preapproval.periodMonths} {preapproval.periodMonths === 1 ? 'mês' : 'meses'}</dd>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.06)] p-6 mb-6">
+          <h3 className="text-base font-semibold text-slate-900 mb-4">Assinatura recorrente atual</h3>
+          <dl>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plano</dt>
+            <dd className="text-sm text-slate-900 mb-3">{preapproval.planName}</dd>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</dt>
+            <dd className="text-sm text-slate-900 mb-3">{preapproval.status}</dd>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Período</dt>
+            <dd className="text-sm text-slate-900 mb-3">
+              {preapproval.periodMonths} {preapproval.periodMonths === 1 ? 'mês' : 'meses'}
+            </dd>
             {preapproval.currentPeriodEnd && (
               <>
-                <dt>Próxima cobrança</dt>
-                <dd>{new Date(preapproval.currentPeriodEnd).toLocaleDateString('pt-BR')}</dd>
+                <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Próxima cobrança</dt>
+                <dd className="text-sm text-slate-900 mb-3">{new Date(preapproval.currentPeriodEnd).toLocaleDateString('pt-BR')}</dd>
               </>
             )}
           </dl>
           {preapproval.status !== 'CANCELLED' && (
             <button
               type="button"
-              className="btn-secondary btn-small"
-              style={{ width: 'auto' }}
+              className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
               onClick={handleCancelPreapproval}
               disabled={isCancellingPreapproval}
             >
@@ -183,25 +193,36 @@ export function PlanoPage() {
         </div>
       )}
 
-      {checkoutError && <div className="form-error">{checkoutError}</div>}
-      {preapprovalError && <div className="form-error">{preapprovalError}</div>}
+      {checkoutError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">
+          {checkoutError}
+        </div>
+      )}
+      {preapprovalError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">
+          {preapprovalError}
+        </div>
+      )}
 
       {!isLoading && !loadError && (
-        <div className="inline-actions" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {plans.map((plan) => (
-            <div className="card" key={plan.id} style={{ minWidth: '240px' }}>
-              <h3>{plan.name}</h3>
-              <p>
+            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5 flex flex-col gap-3" key={plan.id}>
+              <h3 className="text-lg font-semibold text-slate-900">{plan.name}</h3>
+              <p className="text-sm text-slate-500">
                 R$ {plan.priceAmount.toFixed(2)} /mês — até {plan.maxDoctors} médicos
               </p>
-              <div className="form-field">
-                <label htmlFor={`period-${plan.id}`}>Período</label>
+              <div>
+                <label htmlFor={`period-${plan.id}`} className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Período
+                </label>
                 <select
                   id={`period-${plan.id}`}
                   value={selectedPeriod[plan.id] ?? PERIOD_OPTIONS[0]}
                   onChange={(e) =>
                     setSelectedPeriod((prev) => ({ ...prev, [plan.id]: Number(e.target.value) }))
                   }
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
                 >
                   {PERIOD_OPTIONS.map((months) => (
                     <option key={months} value={months}>
@@ -210,11 +231,10 @@ export function PlanoPage() {
                   ))}
                 </select>
               </div>
-              <div className="inline-actions" style={{ gap: '0.5rem' }}>
+              <div className="flex flex-wrap gap-2 mt-1">
                 <button
                   type="button"
-                  className="btn-primary btn-small"
-                  style={{ width: 'auto' }}
+                  className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 text-sm disabled:opacity-50"
                   onClick={() => handleCheckout(plan.id)}
                   disabled={checkingOutPlanId === plan.id}
                 >
@@ -222,8 +242,7 @@ export function PlanoPage() {
                 </button>
                 <button
                   type="button"
-                  className="btn-secondary btn-small"
-                  style={{ width: 'auto' }}
+                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-50"
                   onClick={() => handlePreapprovalCheckout(plan.id)}
                   disabled={preapprovalCheckingOutPlanId === plan.id}
                   title="Cobrança automática recorrente, sem precisar renovar manualmente"
