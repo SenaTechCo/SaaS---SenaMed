@@ -10,6 +10,7 @@ import {
   Palette,
   RefreshCw,
   Stethoscope,
+  UserRound,
   Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +33,7 @@ interface NavItem {
 const ADMIN_ITEMS: NavItem[] = [
   { to: '/dashboard', end: true, icon: LayoutDashboard, label: 'Início' },
   { to: '/dashboard/medicos', icon: Users, label: 'Médicos' },
+  { to: '/dashboard/pacientes', icon: UserRound, label: 'Pacientes' },
   { to: '/dashboard/consultas', icon: Calendar, label: 'Consultas' },
   { to: '/dashboard/plano', icon: CreditCard, label: 'Plano' },
   { to: '/dashboard/personalizacao', icon: Palette, label: 'Personalização' },
