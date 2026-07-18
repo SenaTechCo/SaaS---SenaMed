@@ -266,11 +266,20 @@ export function AppointmentsPage() {
     }
   }
 
-  function openCreateForm() {
-    setCreateForm(emptyCreateForm);
+  function openCreateForm(prefill?: { doctorId?: number | null; date?: string; startTime?: string | null }) {
+    setCreateForm({
+      ...emptyCreateForm,
+      doctorId: prefill?.doctorId != null ? String(prefill.doctorId) : emptyCreateForm.doctorId,
+      date: prefill?.date ?? emptyCreateForm.date,
+      startTime: prefill?.startTime ?? emptyCreateForm.startTime,
+    });
     setCreateError(null);
     resetPatientPicker();
     setShowCreateForm(true);
+  }
+
+  function handleSlotClick(params: { doctorId: number | null; date: string; time: string | null }) {
+    openCreateForm({ doctorId: params.doctorId, date: params.date, startTime: params.time });
   }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -402,7 +411,7 @@ export function AppointmentsPage() {
         </div>
         <button
           type="button"
-          onClick={openCreateForm}
+          onClick={() => openCreateForm()}
           className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 text-sm w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" /> Novo agendamento
@@ -496,7 +505,9 @@ export function AppointmentsPage() {
           appointments={calendarAppointments}
           availability={filterAvailability}
           referenceDate={referenceDate}
+          filterDoctorId={filterDoctorId}
           onAppointmentClick={startReschedule}
+          onSlotClick={handleSlotClick}
           doctorsForDayColumns={viewMode === 'dia' && filterDoctorId == null ? activeDoctors : undefined}
         />
       )}

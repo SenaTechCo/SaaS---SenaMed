@@ -3,12 +3,20 @@ import type { MouseEvent } from 'react';
 import type { Appointment } from '../types/appointment';
 import type { AvailabilitySlot, Doctor } from '../types/doctor';
 
+interface SlotClickParams {
+  doctorId: number | null;
+  date: string;
+  time: string | null;
+}
+
 interface AppointmentCalendarProps {
   view: 'mes' | 'semana' | 'dia';
   appointments: Appointment[];
   availability: AvailabilitySlot[];
   referenceDate: Date;
+  filterDoctorId: number | null;
   onAppointmentClick: (appointment: Appointment) => void;
+  onSlotClick: (params: SlotClickParams) => void;
   doctorsForDayColumns?: Doctor[];
 }
 
@@ -93,6 +101,12 @@ function formatHourLabel(minutes: number): string {
   return `${String(hours).padStart(2, '0')}:00`;
 }
 
+function minutesToTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
 function statusClasses(status: Appointment['status']): string {
   return status === 'CONFIRMED' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500';
 }
@@ -106,7 +120,9 @@ export function AppointmentCalendar({
   appointments,
   availability,
   referenceDate,
+  filterDoctorId,
   onAppointmentClick,
+  onSlotClick,
   doctorsForDayColumns,
 }: AppointmentCalendarProps) {
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
@@ -150,7 +166,8 @@ export function AppointmentCalendar({
             return (
               <div
                 key={dateKey}
-                className={`relative min-h-[110px] border-b border-r border-slate-100 p-1.5 ${
+                onClick={() => onSlotClick({ doctorId: filterDoctorId, date: dateKey, time: null })}
+                className={`relative min-h-[110px] border-b border-r border-slate-100 p-1.5 cursor-pointer hover:bg-primary-50/30 transition-colors ${
                   isCurrentMonth ? 'bg-white' : 'bg-slate-50/40'
                 }`}
               >
@@ -218,6 +235,8 @@ export function AppointmentCalendar({
               return (
                 <DayColumn
                   key={dateKey}
+                  dateKey={dateKey}
+                  columnDoctorId={filterDoctorId}
                   headerLine1={WEEKDAY_ABBR[dayOfWeek - 1]}
                   headerLine2={String(day.getDate())}
                   isToday={isToday}
@@ -226,6 +245,7 @@ export function AppointmentCalendar({
                   hasAvailabilityFilter={availability.length > 0}
                   dayAppointments={dayAppointments}
                   onAppointmentClick={onAppointmentClick}
+                  onSlotClick={onSlotClick}
                 />
               );
             })}
@@ -252,6 +272,8 @@ export function AppointmentCalendar({
               return (
                 <DayColumn
                   key={doctor.id}
+                  dateKey={dateKey}
+                  columnDoctorId={Number(doctor.id)}
                   headerLine1={doctor.name}
                   headerLine2=""
                   isToday={isSameDay(referenceDate, today)}
@@ -260,6 +282,7 @@ export function AppointmentCalendar({
                   hasAvailabilityFilter={false}
                   dayAppointments={doctorAppointments}
                   onAppointmentClick={onAppointmentClick}
+                  onSlotClick={onSlotClick}
                 />
               );
             })}
@@ -279,6 +302,8 @@ export function AppointmentCalendar({
         <div className="flex" style={{ minWidth: 360 }}>
           <TimeAxisColumn timeSlots={timeSlots} />
           <DayColumn
+            dateKey={dateKey}
+            columnDoctorId={filterDoctorId}
             headerLine1={WEEKDAY_ABBR[dayOfWeek - 1]}
             headerLine2={String(referenceDate.getDate())}
             isToday={isSameDay(referenceDate, today)}
@@ -287,6 +312,7 @@ export function AppointmentCalendar({
             hasAvailabilityFilter={availability.length > 0}
             dayAppointments={dayAppointments}
             onAppointmentClick={onAppointmentClick}
+            onSlotClick={onSlotClick}
           />
         </div>
       </div>
@@ -312,6 +338,8 @@ function TimeAxisColumn({ timeSlots }: { timeSlots: number[] }) {
 }
 
 interface DayColumnProps {
+  dateKey: string;
+  columnDoctorId: number | null;
   headerLine1: string;
   headerLine2: string;
   isToday: boolean;
@@ -320,9 +348,12 @@ interface DayColumnProps {
   hasAvailabilityFilter: boolean;
   dayAppointments: Appointment[];
   onAppointmentClick: (appointment: Appointment) => void;
+  onSlotClick: (params: SlotClickParams) => void;
 }
 
 function DayColumn({
+  dateKey,
+  columnDoctorId,
   headerLine1,
   headerLine2,
   isToday,
@@ -331,6 +362,7 @@ function DayColumn({
   hasAvailabilityFilter,
   dayAppointments,
   onAppointmentClick,
+  onSlotClick,
 }: DayColumnProps) {
   return (
     <div className="flex-1 min-w-[140px] border-l border-slate-100">
@@ -348,7 +380,10 @@ function DayColumn({
           return (
             <div
               key={minutes}
-              className={`absolute left-0 right-0 border-t border-slate-100 ${shaded ? 'bg-slate-100/70' : ''}`}
+              onClick={() => onSlotClick({ doctorId: columnDoctorId, date: dateKey, time: minutesToTime(minutes) })}
+              className={`absolute left-0 right-0 border-t border-slate-100 cursor-pointer hover:bg-primary-50/40 transition-colors ${
+                shaded ? 'bg-slate-100/70' : ''
+              }`}
               style={{ top: index * ROW_HEIGHT, height: ROW_HEIGHT }}
             />
           );
