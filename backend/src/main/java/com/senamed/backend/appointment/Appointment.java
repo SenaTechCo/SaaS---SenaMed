@@ -2,6 +2,7 @@ package com.senamed.backend.appointment;
 
 import com.senamed.backend.clinic.Clinic;
 import com.senamed.backend.doctor.Doctor;
+import com.senamed.backend.patient.Patient;
 import com.senamed.backend.tenant.TenantScopedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,6 +56,10 @@ public class Appointment extends TenantScopedEntity {
     @JoinColumn(name = "doctor_id", nullable = false, updatable = false)
     private Doctor doctor;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "patient_id", nullable = true, updatable = false)
+    private Patient patient;
+
     @Column(name = "patient_name", nullable = false)
     private String patientName;
 
@@ -105,8 +110,21 @@ public class Appointment extends TenantScopedEntity {
             LocalDateTime startsAt,
             LocalDateTime endsAt,
             Instant lgpdConsentAt) {
+        this(doctor, null, patientName, patientEmail, patientPhone, startsAt, endsAt, lgpdConsentAt);
+    }
+
+    public Appointment(
+            Doctor doctor,
+            Patient patient,
+            String patientName,
+            String patientEmail,
+            String patientPhone,
+            LocalDateTime startsAt,
+            LocalDateTime endsAt,
+            Instant lgpdConsentAt) {
         this.doctor = doctor;
         this.clinic = doctor.getClinic();
+        this.patient = patient;
         this.patientName = patientName;
         this.patientEmail = patientEmail;
         this.patientPhone = patientPhone;
@@ -125,6 +143,10 @@ public class Appointment extends TenantScopedEntity {
 
     public Doctor getDoctor() {
         return doctor;
+    }
+
+    public Patient getPatient() {
+        return patient;
     }
 
     public String getPatientName() {

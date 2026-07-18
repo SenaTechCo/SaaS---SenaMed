@@ -15,6 +15,7 @@ import java.time.LocalTime;
  */
 public record AppointmentCreateRequest(
         @NotNull(message = "doctorId is required") Long doctorId,
+        Long patientId,
         @NotNull(message = "date is required") LocalDate date,
         @NotNull(message = "startTime is required") LocalTime startTime,
         @NotBlank(message = "patientName is required") String patientName,

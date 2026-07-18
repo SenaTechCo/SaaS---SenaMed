@@ -10,6 +10,8 @@ import com.senamed.backend.common.InvalidRequestException;
 import com.senamed.backend.common.ResourceNotFoundException;
 import com.senamed.backend.doctor.Doctor;
 import com.senamed.backend.doctor.DoctorRepository;
+import com.senamed.backend.patient.Patient;
+import com.senamed.backend.patient.PatientRepository;
 import com.senamed.backend.tenant.TenantContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.ConcurrencyFailureException;
@@ -31,14 +33,17 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
+    private final PatientRepository patientRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public AppointmentService(
             AppointmentRepository appointmentRepository,
             DoctorRepository doctorRepository,
+            PatientRepository patientRepository,
             ApplicationEventPublisher eventPublisher) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
+        this.patientRepository = patientRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -84,8 +89,14 @@ public class AppointmentService {
         }
         LocalDateTime endsAt = startsAt.plusMinutes(PublicSchedulingService.SLOT_DURATION_MINUTES);
 
+        Patient patient = null;
+        if (request.patientId() != null) {
+            patient = patientRepository.findByIdAndClinicId(request.patientId(), clinicId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Paciente não encontrado"));
+        }
+
         Appointment appointment = new Appointment(
-                doctor, request.patientName(), request.patientEmail(), request.patientPhone(),
+                doctor, patient, request.patientName(), request.patientEmail(), request.patientPhone(),
                 startsAt, endsAt, Instant.now());
         try {
             appointment = appointmentRepository.saveAndFlush(appointment);
