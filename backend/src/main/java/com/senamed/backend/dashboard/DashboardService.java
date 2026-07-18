@@ -4,6 +4,9 @@ import com.senamed.backend.appointment.Appointment;
 import com.senamed.backend.appointment.AppointmentRepository;
 import com.senamed.backend.appointment.AppointmentStatus;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
+import com.senamed.backend.clinic.Clinic;
+import com.senamed.backend.clinic.ClinicRepository;
+import com.senamed.backend.common.ResourceNotFoundException;
 import com.senamed.backend.dashboard.dto.DashboardSummaryResponse;
 import com.senamed.backend.doctor.DoctorRepository;
 import com.senamed.backend.security.AuthenticatedUser;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -29,10 +33,15 @@ public class DashboardService {
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
+    private final ClinicRepository clinicRepository;
 
-    public DashboardService(AppointmentRepository appointmentRepository, DoctorRepository doctorRepository) {
+    public DashboardService(
+            AppointmentRepository appointmentRepository,
+            DoctorRepository doctorRepository,
+            ClinicRepository clinicRepository) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
+        this.clinicRepository = clinicRepository;
     }
 
     @Transactional(readOnly = true)
@@ -45,8 +54,11 @@ public class DashboardService {
                 ? appointmentRepository.findAllByClinicIdAndDoctorIdOrderByStartsAtAsc(clinicId, doctorId)
                 : appointmentRepository.findAllByClinicIdOrderByStartsAtAsc(clinicId);
 
-        LocalDate today = LocalDate.now();
-        LocalDateTime now = LocalDateTime.now();
+        Clinic clinic = clinicRepository.findById(clinicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clinic not found for the current session"));
+        ZoneId clinicZone = ZoneId.of(clinic.getTimezone());
+        LocalDate today = LocalDate.now(clinicZone);
+        LocalDateTime now = LocalDateTime.now(clinicZone);
 
         long todayCount = appointments.stream()
                 .filter(appointment -> appointment.getStatus() == AppointmentStatus.CONFIRMED)

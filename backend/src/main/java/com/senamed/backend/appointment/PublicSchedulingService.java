@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,11 +86,12 @@ public class PublicSchedulingService {
     @Transactional(readOnly = true)
     public AvailableSlotsResponse getAvailableSlots(Long doctorId, String rawDate) {
         LocalDate date = parseDate(rawDate);
-        if (date.isBefore(LocalDate.now())) {
+        Doctor doctor = loadActiveDoctor(doctorId);
+        ZoneId clinicZone = ZoneId.of(doctor.getClinic().getTimezone());
+        if (date.isBefore(LocalDate.now(clinicZone))) {
             throw new InvalidRequestException("date não pode estar no passado");
         }
 
-        Doctor doctor = loadActiveDoctor(doctorId);
         return AvailableSlotsResponse.of(date, computeAvailableSlots(doctor, date));
     }
 
@@ -102,8 +104,9 @@ public class PublicSchedulingService {
 
         Doctor doctor = loadActiveDoctor(request.doctorId());
 
+        ZoneId clinicZone = ZoneId.of(doctor.getClinic().getTimezone());
         LocalDateTime startsAt = LocalDateTime.of(request.date(), request.startTime());
-        if (startsAt.isBefore(LocalDateTime.now())) {
+        if (startsAt.isBefore(LocalDateTime.now(clinicZone))) {
             throw new InvalidRequestException("Não é possível agendar em uma data/horário no passado.");
         }
         LocalDateTime endsAt = startsAt.plusMinutes(SLOT_DURATION_MINUTES);
@@ -154,7 +157,8 @@ public class PublicSchedulingService {
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new AppointmentConflictException("Este agendamento já foi cancelado.");
         }
-        if (appointment.getStartsAt().isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_CANCEL))) {
+        ZoneId clinicZone = ZoneId.of(appointment.getClinic().getTimezone());
+        if (appointment.getStartsAt().isBefore(LocalDateTime.now(clinicZone).plusHours(MIN_HOURS_BEFORE_CANCEL))) {
             throw new AppointmentConflictException(
                     "Cancelamento permitido apenas até 24h antes do horário agendado.");
         }

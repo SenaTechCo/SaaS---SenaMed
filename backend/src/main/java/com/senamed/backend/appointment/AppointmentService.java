@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -83,8 +84,9 @@ public class AppointmentService {
                 .filter(candidate -> candidate.getClinic().getId().equals(clinicId))
                 .orElseThrow(() -> new ResourceNotFoundException("Médico não encontrado"));
 
+        ZoneId clinicZone = ZoneId.of(doctor.getClinic().getTimezone());
         LocalDateTime startsAt = LocalDateTime.of(request.date(), request.startTime());
-        if (startsAt.isBefore(LocalDateTime.now())) {
+        if (startsAt.isBefore(LocalDateTime.now(clinicZone))) {
             throw new InvalidRequestException("Não é possível agendar em uma data/horário no passado.");
         }
         LocalDateTime endsAt = startsAt.plusMinutes(PublicSchedulingService.SLOT_DURATION_MINUTES);
@@ -130,8 +132,9 @@ public class AppointmentService {
             throw new AppointmentConflictException("Não é possível reagendar um agendamento cancelado.");
         }
 
+        ZoneId clinicZone = ZoneId.of(appointment.getClinic().getTimezone());
         LocalDateTime startsAt = LocalDateTime.of(request.date(), request.startTime());
-        if (startsAt.isBefore(LocalDateTime.now())) {
+        if (startsAt.isBefore(LocalDateTime.now(clinicZone))) {
             throw new InvalidRequestException("Não é possível reagendar para uma data/horário no passado.");
         }
         LocalDateTime endsAt = startsAt.plusMinutes(PublicSchedulingService.SLOT_DURATION_MINUTES);
