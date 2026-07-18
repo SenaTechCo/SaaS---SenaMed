@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { DashboardLayout } from '../components/DashboardLayout';
+import { ServicosTab } from '../components/configuracoes/ServicosTab';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, ApiError } from '../lib/http';
 import type { User } from '../types/auth';
 
-type Tab = 'conta' | 'seguranca';
+type Tab = 'conta' | 'seguranca' | 'servicos';
 
 interface AccountForm {
   name: string;
@@ -138,7 +139,20 @@ export function ConfiguracoesPage() {
         >
           Segurança
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('servicos')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'servicos'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Serviços
+        </button>
       </div>
+
+      {tab === 'servicos' && <ServicosTab />}
 
       {tab === 'conta' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.06)] p-6 max-w-lg">
