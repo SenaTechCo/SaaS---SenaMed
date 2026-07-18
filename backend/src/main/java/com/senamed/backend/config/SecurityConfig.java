@@ -71,6 +71,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/webhooks/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/doctors/me/**").authenticated()
+                        .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers("/api/doctors/**").hasRole("ADMIN")
                         .requestMatchers("/api/patients/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/clinics/me").hasRole("ADMIN")

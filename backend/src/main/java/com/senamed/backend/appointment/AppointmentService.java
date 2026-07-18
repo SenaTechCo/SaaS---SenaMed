@@ -92,7 +92,7 @@ public class AppointmentService {
         } catch (DataIntegrityViolationException | ConcurrencyFailureException ex) {
             // Same exclusion-constraint/lock-contention race covered by PublicSchedulingService#create.
             throw new AppointmentConflictException(
-                    "Já existe uma consulta marcada para este médico neste horário.");
+                    "Já existe um agendamento marcado para este médico neste horário.");
         }
 
         eventPublisher.publishEvent(new AppointmentCreatedEvent(appointment.getId()));
@@ -116,7 +116,7 @@ public class AppointmentService {
     public AppointmentResponse reschedule(Long id, AppointmentRescheduleRequest request) {
         Appointment appointment = loadOwn(id);
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw new AppointmentConflictException("Não é possível reagendar uma consulta cancelada.");
+            throw new AppointmentConflictException("Não é possível reagendar um agendamento cancelado.");
         }
 
         LocalDateTime startsAt = LocalDateTime.of(request.date(), request.startTime());
@@ -130,7 +130,7 @@ public class AppointmentService {
             appointmentRepository.saveAndFlush(appointment);
         } catch (DataIntegrityViolationException | ConcurrencyFailureException ex) {
             throw new AppointmentConflictException(
-                    "Já existe uma consulta marcada para este médico neste horário.");
+                    "Já existe um agendamento marcado para este médico neste horário.");
         }
         return AppointmentResponse.from(appointment);
     }

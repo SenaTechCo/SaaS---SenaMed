@@ -13,7 +13,7 @@ public record CreateCalendarEventCommand(
 
     public static CreateCalendarEventCommand from(Appointment appointment) {
         return new CreateCalendarEventCommand(
-                "Consulta: " + appointment.getPatientName(),
+                "Agendamento: " + appointment.getPatientName(),
                 "Agendamento SenaMed - " + appointment.getClinic().getName(),
                 appointment.getStartsAt(),
                 appointment.getEndsAt(),

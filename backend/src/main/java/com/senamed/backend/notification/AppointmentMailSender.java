@@ -35,11 +35,11 @@ public class AppointmentMailSender {
         String cancelLink = frontendBaseUrl + "/cancelar/" + appointment.getCancelToken();
 
         String body = "Olá, " + appointment.getPatientName() + "!\n\n"
-                + "Sua consulta com " + appointment.getDoctor().getName() + " em " + clinicName
-                + " foi confirmada para " + formatDateTime(appointment) + ".\n\n"
+                + "Seu agendamento com " + appointment.getDoctor().getName() + " em " + clinicName
+                + " foi confirmado para " + formatDateTime(appointment) + ".\n\n"
                 + "Caso precise cancelar, acesse: " + cancelLink + "\n";
 
-        send(appointment.getPatientEmail(), "Consulta confirmada - " + clinicName, body);
+        send(appointment.getPatientEmail(), "Agendamento confirmado - " + clinicName, body);
     }
 
     public void sendReminder(Appointment appointment, AppointmentMessage message) {
@@ -48,12 +48,12 @@ public class AppointmentMailSender {
         String cancelLink = frontendBaseUrl + "/cancelar/" + appointment.getCancelToken();
 
         String body = "Olá, " + appointment.getPatientName() + "!\n\n"
-                + "Este é um lembrete da sua consulta com " + appointment.getDoctor().getName() + " em " + clinicName
+                + "Este é um lembrete do seu agendamento com " + appointment.getDoctor().getName() + " em " + clinicName
                 + ", amanhã, " + formatDateTime(appointment) + ".\n\n"
                 + "Por favor, confirme sua presença: " + confirmLink + "\n\n"
                 + "Caso não possa comparecer, cancele em: " + cancelLink + "\n";
 
-        send(appointment.getPatientEmail(), "Lembrete: sua consulta é amanhã - " + clinicName, body);
+        send(appointment.getPatientEmail(), "Lembrete: seu agendamento é amanhã - " + clinicName, body);
     }
 
     private void send(String to, String subject, String body) {
