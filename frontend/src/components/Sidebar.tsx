@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Palette,
   RefreshCw,
+  Settings,
   Stethoscope,
   UserRound,
   Users,
@@ -34,9 +35,10 @@ const ADMIN_ITEMS: NavItem[] = [
   { to: '/dashboard', end: true, icon: LayoutDashboard, label: 'Início' },
   { to: '/dashboard/medicos', icon: Users, label: 'Médicos' },
   { to: '/dashboard/pacientes', icon: UserRound, label: 'Pacientes' },
-  { to: '/dashboard/consultas', icon: Calendar, label: 'Consultas' },
+  { to: '/dashboard/agendamentos', icon: Calendar, label: 'Agendamentos' },
   { to: '/dashboard/plano', icon: CreditCard, label: 'Plano' },
   { to: '/dashboard/personalizacao', icon: Palette, label: 'Personalização' },
+  { to: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 
 const DOCTOR_ITEMS: NavItem[] = [
@@ -45,6 +47,7 @@ const DOCTOR_ITEMS: NavItem[] = [
   { to: '/dashboard/minha-disponibilidade', icon: Clock, label: 'Minha Disponibilidade' },
   { to: '/dashboard/minhas-folgas', icon: CalendarOff, label: 'Minhas Folgas' },
   { to: '/dashboard/google-calendar', icon: RefreshCw, label: 'Google Calendar' },
+  { to: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 
 export function Sidebar({ expanded, mobileOpen, onMouseEnter, onMouseLeave, onMobileClose }: SidebarProps) {

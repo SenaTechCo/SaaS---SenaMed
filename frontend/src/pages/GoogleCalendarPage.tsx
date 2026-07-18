@@ -7,7 +7,7 @@ import type { ConnectUrlResponse, GoogleCalendarStatus } from '../types/googleCa
 
 const STATUS_MESSAGES: Record<string, { text: string; className: string }> = {
   connected: {
-    text: 'Google Calendar conectado com sucesso. Suas consultas serão sincronizadas automaticamente.',
+    text: 'Google Calendar conectado com sucesso. Seus agendamentos serão sincronizados automaticamente.',
     className: 'bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-6',
   },
   error: {
@@ -84,7 +84,7 @@ export function GoogleCalendarPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Google Calendar</h1>
-          <p className="text-sm text-slate-500 mt-1">Sincronize suas consultas automaticamente com o seu Google Calendar.</p>
+          <p className="text-sm text-slate-500 mt-1">Sincronize seus agendamentos automaticamente com o seu Google Calendar.</p>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export function GoogleCalendarPage() {
                 </div>
               </div>
               <p className="text-sm text-slate-600 mb-4">
-                Conecte sua conta do Google para que suas consultas sejam criadas e canceladas automaticamente no seu Google Calendar.
+                Conecte sua conta do Google para que seus agendamentos sejam criados e cancelados automaticamente no seu Google Calendar.
               </p>
               <button
                 type="button"

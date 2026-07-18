@@ -9,6 +9,7 @@ import {
   getStoredUser,
   setStoredClinic,
   setStoredSession,
+  setStoredUser,
 } from '../lib/storage';
 
 interface AuthContextValue {
@@ -19,6 +20,7 @@ interface AuthContextValue {
   login: (auth: AuthResponse) => void;
   logout: () => void;
   refreshClinic: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -48,6 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setClinic(fresh);
   }, []);
 
+  const updateUser = useCallback((updated: User) => {
+    setStoredUser(updated);
+    setUser(updated);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
@@ -57,8 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       refreshClinic,
+      updateUser,
     }),
-    [token, user, clinic, login, logout, refreshClinic],
+    [token, user, clinic, login, logout, refreshClinic, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

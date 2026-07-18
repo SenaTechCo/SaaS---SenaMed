@@ -88,7 +88,7 @@ export function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-slate-900">{summary.todayCount}</p>
-                  <p className="text-xs text-slate-500 leading-tight">Consultas hoje</p>
+                  <p className="text-xs text-slate-500 leading-tight">Agendamentos hoje</p>
                 </div>
               </div>
             </div>
@@ -138,7 +138,7 @@ export function DashboardPage() {
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                     <CalendarDays className="w-6 h-6 text-slate-400" />
                   </div>
-                  <p className="text-slate-500 text-sm">Nenhuma consulta futura agendada.</p>
+                  <p className="text-slate-500 text-sm">Nenhum agendamento futuro.</p>
                 </div>
               </div>
             ) : (

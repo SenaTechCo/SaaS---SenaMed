@@ -44,7 +44,7 @@ export function MyAgendaPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Minha Agenda</h1>
-          <p className="text-sm text-slate-500 mt-1">Suas consultas agendadas.</p>
+          <p className="text-sm text-slate-500 mt-1">Seus agendamentos.</p>
         </div>
       </div>
 
@@ -72,7 +72,7 @@ export function MyAgendaPage() {
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                   <CalendarDays className="w-6 h-6 text-slate-400" />
                 </div>
-                <p className="text-slate-500 text-sm">Nenhuma consulta agendada ainda.</p>
+                <p className="text-slate-500 text-sm">Nenhum agendamento ainda.</p>
               </div>
             </div>
           ) : (

@@ -328,7 +328,7 @@ export function PublicClinicPage() {
                           checked={bookingForm.lgpdConsent}
                           onChange={(e) => setBookingForm((f) => ({ ...f, lgpdConsent: e.target.checked }))}
                         />
-                        Autorizo o uso dos meus dados para fins de agendamento desta consulta, conforme a LGPD.
+                        Autorizo o uso dos meus dados para fins deste agendamento, conforme a LGPD.
                       </label>
 
                       <button

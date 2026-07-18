@@ -74,7 +74,7 @@ export function AppointmentsPage() {
         setDoctors(doctorsList);
       } catch (err) {
         if (cancelled) return;
-        setLoadError(err instanceof ApiError ? err.message : 'Não foi possível carregar as consultas.');
+        setLoadError(err instanceof ApiError ? err.message : 'Não foi possível carregar os agendamentos.');
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -118,11 +118,11 @@ export function AppointmentsPage() {
       setCreateForm(emptyCreateForm);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setCreateError(err.message || 'Este médico já tem uma consulta marcada para este horário.');
+        setCreateError(err.message || 'Este médico já tem um agendamento marcado para este horário.');
       } else if (err instanceof ApiError) {
         setCreateError(err.message);
       } else {
-        setCreateError('Não foi possível cadastrar a consulta. Tente novamente.');
+        setCreateError('Não foi possível cadastrar o agendamento. Tente novamente.');
       }
     } finally {
       setIsCreating(false);
@@ -131,7 +131,7 @@ export function AppointmentsPage() {
 
   async function handleCancel(appointment: Appointment) {
     setRowError(null);
-    const confirmed = window.confirm(`Cancelar a consulta de "${appointment.patientName}"?`);
+    const confirmed = window.confirm(`Cancelar o agendamento de "${appointment.patientName}"?`);
     if (!confirmed) return;
 
     setCancellingId(appointment.id);
@@ -139,7 +139,7 @@ export function AppointmentsPage() {
       const updated = await apiFetch<Appointment>(`/api/appointments/${appointment.id}/cancel`, { method: 'POST' });
       setAppointments((prev) => prev.map((a) => (a.id === appointment.id ? updated : a)));
     } catch (err) {
-      setRowError(err instanceof ApiError ? err.message : 'Não foi possível cancelar a consulta.');
+      setRowError(err instanceof ApiError ? err.message : 'Não foi possível cancelar o agendamento.');
     } finally {
       setCancellingId(null);
     }
@@ -169,9 +169,9 @@ export function AppointmentsPage() {
       setReschedulingId(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setRescheduleError(err.message || 'Este médico já tem uma consulta marcada para este horário.');
+        setRescheduleError(err.message || 'Este médico já tem um agendamento marcado para este horário.');
       } else {
-        setRescheduleError(err instanceof ApiError ? err.message : 'Não foi possível reagendar a consulta.');
+        setRescheduleError(err instanceof ApiError ? err.message : 'Não foi possível reagendar o agendamento.');
       }
     } finally {
       setIsSavingReschedule(false);
@@ -185,15 +185,15 @@ export function AppointmentsPage() {
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Consultas</h1>
-          <p className="text-sm text-slate-500 mt-1">Todas as consultas agendadas da clínica.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Agendamentos</h1>
+          <p className="text-sm text-slate-500 mt-1">Todos os agendamentos da clínica.</p>
         </div>
         <button
           type="button"
           onClick={openCreateForm}
           className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 text-sm w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4" /> Nova consulta
+          <Plus className="w-4 h-4" /> Novo agendamento
         </button>
       </div>
 
@@ -222,7 +222,7 @@ export function AppointmentsPage() {
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                   <CalendarDays className="w-6 h-6 text-slate-400" />
                 </div>
-                <p className="text-slate-500 text-sm">Nenhuma consulta agendada ainda.</p>
+                <p className="text-slate-500 text-sm">Nenhum agendamento ainda.</p>
               </div>
             </div>
           ) : (
@@ -293,7 +293,7 @@ export function AppointmentsPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-slate-900">Cadastrar consulta</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Cadastrar agendamento</h2>
               </div>
               <button
                 type="button"
@@ -432,7 +432,7 @@ export function AppointmentsPage() {
             <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
               <div className="flex-1">
                 <h2 className="text-lg font-semibold text-slate-900">
-                  Reagendar consulta{reschedulingAppointment ? ` — ${reschedulingAppointment.patientName}` : ''}
+                  Reagendar agendamento{reschedulingAppointment ? ` — ${reschedulingAppointment.patientName}` : ''}
                 </h2>
               </div>
               <button

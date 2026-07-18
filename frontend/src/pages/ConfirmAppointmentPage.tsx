@@ -38,7 +38,7 @@ export function ConfirmAppointmentPage() {
           {!appointment && (
             <>
               <p className="subtitle">
-                Ao confirmar, você indica que comparecerá à consulta agendada.
+                Ao confirmar, você indica que comparecerá ao agendamento.
               </p>
               {error && <div className="form-error">{error}</div>}
               <button type="button" className="btn-primary btn-small" style={{ width: 'auto' }} onClick={handleConfirm} disabled={isConfirming}>
