@@ -27,6 +27,7 @@ export interface AppointmentPayload {
   doctorId: number;
   date: string;
   startTime: string;
+  patientId?: number | null;
   patientName: string;
   patientEmail: string;
   patientPhone: string | null;
@@ -48,6 +49,7 @@ export interface Appointment {
   date: string;
   startTime: string;
   endTime: string;
+  patientId: number | null;
   patientName: string;
   status: AppointmentStatus;
   cancelToken: string;
