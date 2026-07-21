@@ -110,9 +110,13 @@ class DoctorSelfServiceIntegrationTest extends AbstractIntegrationTest {
         grantAccess(adminHeaders, doctor.id(), "doutor.restrito@restricaomedico.com", "SenhaForte123");
         HttpHeaders doctorHeaders = loginHeaders("doutor.restrito@restricaomedico.com", "SenhaForte123");
 
+        // Read-only doctor list stays open to any authenticated user (KAN permission reform) -
+        // any staff member needs it to build an appointment, regardless of PERM_MANAGE_USERS.
+        // (String.class here, not ApiError.class, since a 200 response body is a JSON array, not
+        // an error shape.)
         assertThat(restTemplate.exchange(
-                url("/api/doctors"), HttpMethod.GET, new HttpEntity<>(doctorHeaders), ApiError.class)
-                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+                url("/api/doctors"), HttpMethod.GET, new HttpEntity<>(doctorHeaders), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
 
         assertThat(restTemplate.exchange(
                 url("/api/doctors"), HttpMethod.POST,
@@ -146,7 +150,7 @@ class DoctorSelfServiceIntegrationTest extends AbstractIntegrationTest {
     private void grantAccess(HttpHeaders adminHeaders, Long doctorId, String email, String password) {
         ResponseEntity<DoctorAccessResponse> response = restTemplate.exchange(
                 url("/api/doctors/" + doctorId + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest(email, password), adminHeaders), DoctorAccessResponse.class);
+                new HttpEntity<>(new GrantDoctorAccessRequest(email, password, null), adminHeaders), DoctorAccessResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
@@ -161,7 +165,7 @@ class DoctorSelfServiceIntegrationTest extends AbstractIntegrationTest {
 
     private AppointmentResponse bookAppointment(Long doctorId, LocalDate date, LocalTime startTime, String patientName, String patientEmail) {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, null, date, startTime, patientName, patientEmail, "11999998888", true);
+                doctorId, null, List.of(), date, startTime, patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.postForEntity(
                 url("/api/public/appointments"), request, AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

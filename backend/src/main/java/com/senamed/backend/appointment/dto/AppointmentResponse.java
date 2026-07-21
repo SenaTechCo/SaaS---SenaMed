@@ -6,6 +6,7 @@ import com.senamed.backend.appointment.AppointmentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 public record AppointmentResponse(
         Long id,
@@ -20,8 +21,7 @@ public record AppointmentResponse(
         AppointmentStatus status,
         String cancelToken,
         Instant confirmedAt,
-        Long serviceId,
-        String serviceName,
+        List<ServiceLineResponse> services,
         BigDecimal price) {
 
     public static AppointmentResponse from(Appointment appointment) {
@@ -38,8 +38,7 @@ public record AppointmentResponse(
                 appointment.getStatus(),
                 appointment.getCancelToken() != null ? appointment.getCancelToken().toString() : null,
                 appointment.getConfirmedAt(),
-                appointment.getService() != null ? appointment.getService().getId() : null,
-                appointment.getService() != null ? appointment.getService().getName() : null,
+                appointment.getLineItems().stream().map(ServiceLineResponse::from).toList(),
                 appointment.getPrice());
     }
 }

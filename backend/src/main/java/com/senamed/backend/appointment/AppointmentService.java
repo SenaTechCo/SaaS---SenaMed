@@ -3,6 +3,7 @@ package com.senamed.backend.appointment;
 import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentRescheduleRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
+import com.senamed.backend.appointment.dto.ServiceItemRequest;
 import com.senamed.backend.appointment.event.AppointmentAttendedEvent;
 import com.senamed.backend.appointment.event.AppointmentCancelledEvent;
 import com.senamed.backend.appointment.event.AppointmentCreatedEvent;
@@ -26,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Authenticated appointments listing and staff-initiated create/cancel/reschedule for the clinic
@@ -103,15 +105,14 @@ public class AppointmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Paciente não encontrado"));
         }
 
-        ServiceOffering service = null;
-        if (request.serviceId() != null) {
-            service = serviceOfferingRepository.findByIdAndClinicId(request.serviceId(), clinicId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado"));
-        }
-
         Appointment appointment = new Appointment(
-                doctor, patient, service, request.patientName(), request.patientEmail(), request.patientPhone(),
+                doctor, patient, request.patientName(), request.patientEmail(), request.patientPhone(),
                 startsAt, endsAt, Instant.now());
+        for (ServiceItemRequest item : Optional.ofNullable(request.services()).orElse(List.of())) {
+            ServiceOffering service = serviceOfferingRepository.findByIdAndClinicId(item.serviceId(), clinicId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado"));
+            appointment.addLineItem(service, item.quantity());
+        }
         try {
             appointment = appointmentRepository.saveAndFlush(appointment);
         } catch (DataIntegrityViolationException | ConcurrencyFailureException ex) {
@@ -181,6 +182,39 @@ public class AppointmentService {
             throw new AppointmentConflictException("Só é possível marcar falta em um agendamento confirmado.");
         }
         appointment.markNoShow();
+        return AppointmentResponse.from(appointment);
+    }
+
+    /** Staff adding a service line item to a confirmed appointment (KAN-103). */
+    @Transactional
+    public AppointmentResponse addServiceItem(Long appointmentId, ServiceItemRequest request) {
+        Appointment appointment = loadOwn(appointmentId);
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new AppointmentConflictException("Só é possível alterar serviços de um agendamento confirmado.");
+        }
+        ServiceOffering service = serviceOfferingRepository
+                .findByIdAndClinicId(request.serviceId(), TenantContext.currentClinicId())
+                .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado"));
+        appointment.addLineItem(service, request.quantity());
+        // appointment already has an id, so Spring Data's save() merges rather than persists - merge
+        // cascades onto the new (transient) AppointmentLineItem by creating a managed copy, which is
+        // only reachable through the RETURNED entity, not the original `appointment` reference. The
+        // new item's id (GenerationType.IDENTITY) is only assigned on that copy once flushed, so we
+        // must reassign `appointment` here or AppointmentResponse.from below would serialize a stale
+        // null id for the line item the frontend just added (breaking its immediate removal).
+        appointment = appointmentRepository.saveAndFlush(appointment);
+        return AppointmentResponse.from(appointment);
+    }
+
+    /** Staff removing a service line item from a confirmed appointment (KAN-103). */
+    @Transactional
+    public AppointmentResponse removeServiceItem(Long appointmentId, Long lineItemId) {
+        Appointment appointment = loadOwn(appointmentId);
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new AppointmentConflictException("Só é possível alterar serviços de um agendamento confirmado.");
+        }
+        appointment.removeLineItem(lineItemId);
+        appointment = appointmentRepository.saveAndFlush(appointment);
         return AppointmentResponse.from(appointment);
     }
 

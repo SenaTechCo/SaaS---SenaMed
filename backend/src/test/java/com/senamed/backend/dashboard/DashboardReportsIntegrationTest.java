@@ -3,6 +3,7 @@ package com.senamed.backend.dashboard;
 import com.senamed.backend.AbstractIntegrationTest;
 import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
+import com.senamed.backend.appointment.dto.ServiceItemRequest;
 import com.senamed.backend.auth.dto.AuthClinicDto;
 import com.senamed.backend.auth.dto.AuthResponse;
 import com.senamed.backend.auth.dto.RegisterClinicRequest;
@@ -241,8 +242,9 @@ class DashboardReportsIntegrationTest extends AbstractIntegrationTest {
     }
 
     private AppointmentResponse createAppointment(HttpHeaders headers, Long doctorId, Long serviceId, String patientName, String patientEmail) {
+        List<ServiceItemRequest> services = serviceId != null ? List.of(new ServiceItemRequest(serviceId, 1)) : List.of();
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, serviceId, FUTURE_DATE, LocalTime.of(9, 0), patientName, patientEmail, "11999998888", true);
+                doctorId, null, services, FUTURE_DATE, LocalTime.of(9, 0), patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, headers), AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -268,7 +270,7 @@ class DashboardReportsIntegrationTest extends AbstractIntegrationTest {
     private DoctorAccessResponse grantAccess(HttpHeaders adminHeaders, Long doctorId, String email, String password) {
         ResponseEntity<DoctorAccessResponse> response = restTemplate.exchange(
                 url("/api/doctors/" + doctorId + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest(email, password), adminHeaders), DoctorAccessResponse.class);
+                new HttpEntity<>(new GrantDoctorAccessRequest(email, password, null), adminHeaders), DoctorAccessResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return response.getBody();
     }

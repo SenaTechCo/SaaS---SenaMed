@@ -222,7 +222,7 @@ class AppointmentMessageFlowIntegrationTest extends AbstractIntegrationTest {
 
     private AppointmentResponse bookAppointment(Long doctorId, LocalDate date, LocalTime startTime, String patientName, String patientEmail) {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, null, date, startTime, patientName, patientEmail, "11999998888", true);
+                doctorId, null, List.of(), date, startTime, patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.postForEntity(
                 url("/api/public/appointments"), request, AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

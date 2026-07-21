@@ -2,7 +2,9 @@ package com.senamed.backend.user;
 
 import com.senamed.backend.clinic.Clinic;
 import com.senamed.backend.doctor.Doctor;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -15,6 +17,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * {@code User} intentionally does NOT extend
@@ -58,6 +62,12 @@ public class User {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = true, updatable = false)
     private Doctor doctor;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "permission")
+    private Set<Permission> permissions = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -111,6 +121,21 @@ public class User {
         return createdAt;
     }
 
+    public Set<Permission> getPermissions() {
+        return permissions;
+    }
+
+    /**
+     * @return every permission this user actually has, for enforcement purposes.
+     * {@link UserRole#ADMIN} users always get every {@link Permission} regardless of what (if
+     * anything) is stored in {@code permissions} - this is a hard security invariant: the clinic
+     * owner's ADMIN account must never lose access through the permission system, and
+     * {@code permissions} is never even read for an ADMIN user.
+     */
+    public Set<Permission> effectivePermissions() {
+        return role == UserRole.ADMIN ? Set.of(Permission.values()) : permissions;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -121,5 +146,10 @@ public class User {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    /** Replaces the whole permission set - used by "save the whole edit form" callers. */
+    public void setPermissions(Set<Permission> permissions) {
+        this.permissions = new HashSet<>(permissions);
     }
 }

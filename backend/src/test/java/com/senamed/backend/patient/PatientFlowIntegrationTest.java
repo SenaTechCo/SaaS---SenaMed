@@ -176,7 +176,7 @@ class PatientFlowIntegrationTest extends AbstractIntegrationTest {
     private void grantAccess(HttpHeaders adminHeaders, Long doctorId, String email, String password) {
         ResponseEntity<DoctorAccessResponse> response = restTemplate.exchange(
                 url("/api/doctors/" + doctorId + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest(email, password), adminHeaders), DoctorAccessResponse.class);
+                new HttpEntity<>(new GrantDoctorAccessRequest(email, password, null), adminHeaders), DoctorAccessResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 

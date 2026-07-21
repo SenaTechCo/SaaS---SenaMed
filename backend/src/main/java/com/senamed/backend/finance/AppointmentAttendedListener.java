@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.stream.Collectors;
+
 /**
  * Owns the auto-billing side effect of marking an appointment as attended (KAN-100): creates a
  * {@code Receivable} in response to the event published by {@code AppointmentService.markAttended},
@@ -39,8 +41,13 @@ public class AppointmentAttendedListener {
             return;
         }
 
+        String description = appointment.getLineItems().stream()
+                .map(item -> item.getService().getName())
+                .distinct()
+                .collect(Collectors.joining(", "));
+
         receivableRepository.save(new Receivable(
                 appointment.getClinic(), appointment, appointment.getDoctor(),
-                appointment.getService().getName(), appointment.getPrice()));
+                description, appointment.getPrice()));
     }
 }

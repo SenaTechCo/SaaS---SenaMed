@@ -3,6 +3,7 @@ package com.senamed.backend.finance;
 import com.senamed.backend.AbstractIntegrationTest;
 import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
+import com.senamed.backend.appointment.dto.ServiceItemRequest;
 import com.senamed.backend.auth.dto.AuthResponse;
 import com.senamed.backend.auth.dto.RegisterClinicRequest;
 import com.senamed.backend.catalog.dto.ServiceOfferingCreateRequest;
@@ -214,8 +215,9 @@ class FinanceIntegrationTest extends AbstractIntegrationTest {
 
     private AppointmentResponse createAppointment(
             HttpHeaders headers, Long doctorId, Long serviceId, LocalTime startTime, String patientName, String patientEmail) {
+        List<ServiceItemRequest> services = serviceId != null ? List.of(new ServiceItemRequest(serviceId, 1)) : List.of();
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, serviceId, FUTURE_DATE, startTime, patientName, patientEmail, "11999998888", true);
+                doctorId, null, services, FUTURE_DATE, startTime, patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, headers), AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

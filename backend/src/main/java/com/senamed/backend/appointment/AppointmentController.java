@@ -3,9 +3,11 @@ package com.senamed.backend.appointment;
 import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentRescheduleRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
+import com.senamed.backend.appointment.dto.ServiceItemRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,5 +56,15 @@ public class AppointmentController {
     @PatchMapping("/{id}/faltou")
     public AppointmentResponse markNoShow(@PathVariable Long id) {
         return appointmentService.markNoShow(id);
+    }
+
+    @PostMapping("/{id}/servicos")
+    public AppointmentResponse addServiceItem(@PathVariable Long id, @Valid @RequestBody ServiceItemRequest request) {
+        return appointmentService.addServiceItem(id, request);
+    }
+
+    @DeleteMapping("/{id}/servicos/{lineItemId}")
+    public AppointmentResponse removeServiceItem(@PathVariable Long id, @PathVariable Long lineItemId) {
+        return appointmentService.removeServiceItem(id, lineItemId);
     }
 }

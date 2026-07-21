@@ -81,7 +81,7 @@ class AppointmentConcurrencyIntegrationTest extends AbstractIntegrationTest {
                 }
 
                 AppointmentCreateRequest request = new AppointmentCreateRequest(
-                        doctorId, null, null, FUTURE_DATE, LocalTime.of(9, 0),
+                        doctorId, null, List.of(), FUTURE_DATE, LocalTime.of(9, 0),
                         "Paciente " + index, "paciente" + index + "@concorrencia.com", null, true);
                 ResponseEntity<String> response = restTemplate.postForEntity(
                         url("/api/public/appointments"), request, String.class);

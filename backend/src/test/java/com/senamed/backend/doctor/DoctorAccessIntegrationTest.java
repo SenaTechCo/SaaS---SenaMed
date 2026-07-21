@@ -50,7 +50,7 @@ class DoctorAccessIntegrationTest extends AbstractIntegrationTest {
         grantAccess(adminHeaders, doctor.id(), "maria1@acessoduplicado.com", "SenhaForte123");
         ResponseEntity<ApiError> secondGrant = restTemplate.exchange(
                 url("/api/doctors/" + doctor.id() + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest("maria2@acessoduplicado.com", "SenhaForte123"), adminHeaders),
+                new HttpEntity<>(new GrantDoctorAccessRequest("maria2@acessoduplicado.com", "SenhaForte123", null), adminHeaders),
                 ApiError.class);
 
         assertThat(secondGrant.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
@@ -64,7 +64,7 @@ class DoctorAccessIntegrationTest extends AbstractIntegrationTest {
 
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/doctors/" + doctor.id() + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest("admin@emailduplicado.com", "SenhaForte123"), adminHeaders),
+                new HttpEntity<>(new GrantDoctorAccessRequest("admin@emailduplicado.com", "SenhaForte123", null), adminHeaders),
                 ApiError.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
@@ -78,7 +78,7 @@ class DoctorAccessIntegrationTest extends AbstractIntegrationTest {
 
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/doctors/" + doctorA.id() + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest("intruso@clinicabacesso.com", "SenhaForte123"), clinicBHeaders),
+                new HttpEntity<>(new GrantDoctorAccessRequest("intruso@clinicabacesso.com", "SenhaForte123", null), clinicBHeaders),
                 ApiError.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -120,7 +120,7 @@ class DoctorAccessIntegrationTest extends AbstractIntegrationTest {
 
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/doctors/" + doctor.id() + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest("outro@tokenmedico.com", "SenhaForte123"), doctorHeaders),
+                new HttpEntity<>(new GrantDoctorAccessRequest("outro@tokenmedico.com", "SenhaForte123", null), doctorHeaders),
                 ApiError.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -129,7 +129,7 @@ class DoctorAccessIntegrationTest extends AbstractIntegrationTest {
     private ResponseEntity<DoctorAccessResponse> grantAccess(HttpHeaders adminHeaders, Long doctorId, String email, String password) {
         return restTemplate.exchange(
                 url("/api/doctors/" + doctorId + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest(email, password), adminHeaders), DoctorAccessResponse.class);
+                new HttpEntity<>(new GrantDoctorAccessRequest(email, password, null), adminHeaders), DoctorAccessResponse.class);
     }
 
     private HttpHeaders loginHeaders(String email, String password) {

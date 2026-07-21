@@ -1,5 +1,6 @@
 package com.senamed.backend.security;
 
+import com.senamed.backend.user.Permission;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -12,7 +13,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Issues and validates the JWTs used by the whole API.
@@ -23,8 +27,9 @@ import java.util.Optional;
  *   "sub": "<userId>",
  *   "clinicId": <clinicId>,
  *   "email": "<email>",
- *   "role": "<ADMIN|DOCTOR>",
+ *   "role": "<ADMIN|DOCTOR|STAFF>",
  *   "doctorId": <doctorId>,   // only present for DOCTOR-role users
+ *   "permissions": ["MANAGE_PATIENTS", ...],
  *   "iat": ...,
  *   "exp": ...
  * }
@@ -47,13 +52,15 @@ public class JwtService {
         this.expiration = Duration.ofMinutes(expirationMinutes);
     }
 
-    public String generateToken(Long userId, Long clinicId, String email, String role, Long doctorId) {
+    public String generateToken(
+            Long userId, Long clinicId, String email, String role, Long doctorId, Set<Permission> permissions) {
         Instant now = Instant.now();
         var builder = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("clinicId", clinicId)
                 .claim("email", email)
-                .claim("role", role);
+                .claim("role", role)
+                .claim("permissions", permissions.stream().map(Enum::name).toList());
         if (doctorId != null) {
             builder.claim("doctorId", doctorId);
         }
@@ -82,7 +89,13 @@ public class JwtService {
             String role = claims.get("role", String.class);
             Number doctorIdClaim = claims.get("doctorId", Number.class);
             Long doctorId = doctorIdClaim != null ? doctorIdClaim.longValue() : null;
-            return Optional.of(new AuthenticatedUser(userId, clinicId, email, role, doctorId));
+            // Defensive: tokens issued before this claim existed have no "permissions" entry -
+            // treat missing/null as an empty set rather than NPE-ing.
+            List<?> permissionsClaim = claims.get("permissions", List.class);
+            Set<String> permissions = permissionsClaim == null
+                    ? Set.of()
+                    : new HashSet<>(permissionsClaim.stream().map(String.class::cast).toList());
+            return Optional.of(new AuthenticatedUser(userId, clinicId, email, role, doctorId, permissions));
         } catch (JwtException | IllegalArgumentException | NullPointerException e) {
             return Optional.empty();
         }

@@ -152,7 +152,7 @@ class AppointmentFlowIntegrationTest extends AbstractIntegrationTest {
         setAvailability(clinic.headers, doctorId, FUTURE_DAY_OF_WEEK, LocalTime.of(9, 0), LocalTime.of(10, 0));
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Sem Consentimento", "semconsentimento@paciente.com", null, false);
+                doctorId, null, List.of(), FUTURE_DATE, LocalTime.of(9, 0), "Paciente Sem Consentimento", "semconsentimento@paciente.com", null, false);
         ResponseEntity<ApiError> response = restTemplate.postForEntity(url("/api/public/appointments"), request, ApiError.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -165,7 +165,7 @@ class AppointmentFlowIntegrationTest extends AbstractIntegrationTest {
         Long doctorId = createDoctor(clinic.headers, "Dr. Passado Post", "Clinico Geral").id();
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, null, LocalDate.now().minusDays(1), LocalTime.of(9, 0), "Paciente Passado", "passado@paciente.com", null, true);
+                doctorId, null, List.of(), LocalDate.now().minusDays(1), LocalTime.of(9, 0), "Paciente Passado", "passado@paciente.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.postForEntity(url("/api/public/appointments"), request, ApiError.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -180,7 +180,7 @@ class AppointmentFlowIntegrationTest extends AbstractIntegrationTest {
         bookAppointment(doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Primeiro Paciente", "primeiro@paciente.com");
 
         AppointmentCreateRequest secondRequest = new AppointmentCreateRequest(
-                doctorId, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Segundo Paciente", "segundo@paciente.com", null, true);
+                doctorId, null, List.of(), FUTURE_DATE, LocalTime.of(9, 0), "Segundo Paciente", "segundo@paciente.com", null, true);
         ResponseEntity<ApiError> conflictResponse = restTemplate.postForEntity(
                 url("/api/public/appointments"), secondRequest, ApiError.class);
 
@@ -190,7 +190,7 @@ class AppointmentFlowIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createAppointment_inactiveOrUnknownDoctor_returns404() {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                999999L, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@teste.com", null, true);
+                999999L, null, List.of(), FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@teste.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.postForEntity(url("/api/public/appointments"), request, ApiError.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
@@ -259,7 +259,7 @@ class AppointmentFlowIntegrationTest extends AbstractIntegrationTest {
 
     private AppointmentResponse bookAppointment(Long doctorId, LocalDate date, LocalTime startTime, String patientName, String patientEmail) {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, null, date, startTime, patientName, patientEmail, "11999998888", true);
+                doctorId, null, List.of(), date, startTime, patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.postForEntity(
                 url("/api/public/appointments"), request, AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

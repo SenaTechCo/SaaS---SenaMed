@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 /**
  * Grants/revokes a doctor's own login (KAN-77) - kept separate from {@link DoctorService} since it
  * needs {@link UserRepository}/{@link PasswordEncoder}, which that service has no other reason to
@@ -45,6 +47,7 @@ public class DoctorAccessService {
         User user = new User(
                 doctor.getClinic(), doctor.getName(), request.email(),
                 passwordEncoder.encode(request.password()), UserRole.DOCTOR, doctor);
+        user.setPermissions(request.permissions() == null ? Set.of() : request.permissions());
         user = userRepository.save(user);
         return new DoctorAccessResponse(user.getId(), doctor.getId(), user.getEmail());
     }

@@ -86,7 +86,9 @@ public class AuthService {
 
     private AuthResponse buildAuthResponse(Clinic clinic, User user) {
         Long doctorId = user.getDoctor() != null ? user.getDoctor().getId() : null;
-        String token = jwtService.generateToken(user.getId(), clinic.getId(), user.getEmail(), user.getRole().name(), doctorId);
+        String token = jwtService.generateToken(
+                user.getId(), clinic.getId(), user.getEmail(), user.getRole().name(), doctorId,
+                user.effectivePermissions());
         return new AuthResponse(token, AuthClinicDto.from(clinic), AuthUserDto.from(user));
     }
 }

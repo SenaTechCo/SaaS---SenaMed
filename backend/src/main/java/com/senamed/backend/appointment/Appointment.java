@@ -5,6 +5,7 @@ import com.senamed.backend.clinic.Clinic;
 import com.senamed.backend.doctor.Doctor;
 import com.senamed.backend.patient.Patient;
 import com.senamed.backend.tenant.TenantScopedEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
@@ -22,6 +24,8 @@ import org.hibernate.generator.EventType;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -62,12 +66,11 @@ public class Appointment extends TenantScopedEntity {
     @JoinColumn(name = "patient_id", nullable = true, updatable = false)
     private Patient patient;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_id", nullable = true, updatable = false)
-    private ServiceOffering service;
-
     @Column(nullable = true)
     private BigDecimal price;
+
+    @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AppointmentLineItem> lineItems = new ArrayList<>();
 
     @Column(name = "patient_name", nullable = false)
     private String patientName;
@@ -131,24 +134,9 @@ public class Appointment extends TenantScopedEntity {
             LocalDateTime startsAt,
             LocalDateTime endsAt,
             Instant lgpdConsentAt) {
-        this(doctor, patient, null, patientName, patientEmail, patientPhone, startsAt, endsAt, lgpdConsentAt);
-    }
-
-    public Appointment(
-            Doctor doctor,
-            Patient patient,
-            ServiceOffering service,
-            String patientName,
-            String patientEmail,
-            String patientPhone,
-            LocalDateTime startsAt,
-            LocalDateTime endsAt,
-            Instant lgpdConsentAt) {
         this.doctor = doctor;
         this.clinic = doctor.getClinic();
         this.patient = patient;
-        this.service = service;
-        this.price = service != null ? service.getPrice() : null;
         this.patientName = patientName;
         this.patientEmail = patientEmail;
         this.patientPhone = patientPhone;
@@ -173,12 +161,28 @@ public class Appointment extends TenantScopedEntity {
         return patient;
     }
 
-    public ServiceOffering getService() {
-        return service;
-    }
-
     public BigDecimal getPrice() {
         return price;
+    }
+
+    public List<AppointmentLineItem> getLineItems() {
+        return lineItems;
+    }
+
+    public void addLineItem(ServiceOffering service, int quantity) {
+        lineItems.add(new AppointmentLineItem(this, service, quantity));
+        recalculatePrice();
+    }
+
+    public void removeLineItem(Long lineItemId) {
+        lineItems.removeIf(item -> item.getId().equals(lineItemId));
+        recalculatePrice();
+    }
+
+    private void recalculatePrice() {
+        this.price = lineItems.isEmpty() ? null : lineItems.stream()
+                .map(AppointmentLineItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public String getPatientName() {

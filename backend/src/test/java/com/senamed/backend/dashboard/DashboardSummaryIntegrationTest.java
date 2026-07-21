@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -100,7 +101,7 @@ class DashboardSummaryIntegrationTest extends AbstractIntegrationTest {
     private AppointmentResponse createAppointment(
             HttpHeaders headers, Long doctorId, LocalDate date, LocalTime startTime, String patientName, String patientEmail) {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, null, date, startTime, patientName, patientEmail, "11999998888", true);
+                doctorId, null, List.of(), date, startTime, patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, headers), AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -110,7 +111,7 @@ class DashboardSummaryIntegrationTest extends AbstractIntegrationTest {
     private void grantAccess(HttpHeaders adminHeaders, Long doctorId, String email, String password) {
         ResponseEntity<DoctorAccessResponse> response = restTemplate.exchange(
                 url("/api/doctors/" + doctorId + "/access"), HttpMethod.POST,
-                new HttpEntity<>(new GrantDoctorAccessRequest(email, password), adminHeaders), DoctorAccessResponse.class);
+                new HttpEntity<>(new GrantDoctorAccessRequest(email, password, null), adminHeaders), DoctorAccessResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
