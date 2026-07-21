@@ -45,4 +45,9 @@ public class AppointmentController {
     public AppointmentResponse reschedule(@PathVariable Long id, @Valid @RequestBody AppointmentRescheduleRequest request) {
         return appointmentService.reschedule(id, request);
     }
+
+    @PatchMapping("/{id}/atender")
+    public AppointmentResponse markAttended(@PathVariable Long id) {
+        return appointmentService.markAttended(id);
+    }
 }

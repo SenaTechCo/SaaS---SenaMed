@@ -39,6 +39,7 @@ public abstract class AbstractIntegrationTest {
         // permanently remove the 3 seed rows before the very first test.
         jdbcTemplate.execute(
                 "TRUNCATE TABLE appointment_calendar_sync_jobs, doctor_google_calendar_credentials, "
+                        + "receivables, commission_configs, "
                         + "appointments, doctor_time_off, doctor_availability, doctors, patients, "
                         + "service_offerings, users, "
                         + "clinics, subscriptions, preapproval_charges, preapprovals RESTART IDENTITY CASCADE");

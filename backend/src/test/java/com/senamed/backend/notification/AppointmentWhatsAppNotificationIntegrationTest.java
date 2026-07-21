@@ -138,7 +138,7 @@ class AppointmentWhatsAppNotificationIntegrationTest extends AbstractIntegration
 
     private AppointmentResponse bookAppointment(Long doctorId, String patientName, String patientEmail, String patientPhone) {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, FUTURE_DATE, LocalTime.of(9, 0), patientName, patientEmail, patientPhone, true);
+                doctorId, null, null, FUTURE_DATE, LocalTime.of(9, 0), patientName, patientEmail, patientPhone, true);
         ResponseEntity<AppointmentResponse> response = restTemplate.postForEntity(
                 url("/api/public/appointments"), request, AppointmentResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

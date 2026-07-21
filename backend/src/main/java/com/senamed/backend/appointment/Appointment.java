@@ -1,5 +1,6 @@
 package com.senamed.backend.appointment;
 
+import com.senamed.backend.catalog.ServiceOffering;
 import com.senamed.backend.clinic.Clinic;
 import com.senamed.backend.doctor.Doctor;
 import com.senamed.backend.patient.Patient;
@@ -18,6 +19,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -59,6 +61,13 @@ public class Appointment extends TenantScopedEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = true, updatable = false)
     private Patient patient;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id", nullable = true, updatable = false)
+    private ServiceOffering service;
+
+    @Column(nullable = true)
+    private BigDecimal price;
 
     @Column(name = "patient_name", nullable = false)
     private String patientName;
@@ -122,9 +131,24 @@ public class Appointment extends TenantScopedEntity {
             LocalDateTime startsAt,
             LocalDateTime endsAt,
             Instant lgpdConsentAt) {
+        this(doctor, patient, null, patientName, patientEmail, patientPhone, startsAt, endsAt, lgpdConsentAt);
+    }
+
+    public Appointment(
+            Doctor doctor,
+            Patient patient,
+            ServiceOffering service,
+            String patientName,
+            String patientEmail,
+            String patientPhone,
+            LocalDateTime startsAt,
+            LocalDateTime endsAt,
+            Instant lgpdConsentAt) {
         this.doctor = doctor;
         this.clinic = doctor.getClinic();
         this.patient = patient;
+        this.service = service;
+        this.price = service != null ? service.getPrice() : null;
         this.patientName = patientName;
         this.patientEmail = patientEmail;
         this.patientPhone = patientPhone;
@@ -147,6 +171,14 @@ public class Appointment extends TenantScopedEntity {
 
     public Patient getPatient() {
         return patient;
+    }
+
+    public ServiceOffering getService() {
+        return service;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
     }
 
     public String getPatientName() {
@@ -191,6 +223,10 @@ public class Appointment extends TenantScopedEntity {
 
     public void cancel() {
         this.status = AppointmentStatus.CANCELLED;
+    }
+
+    public void markAttended() {
+        this.status = AppointmentStatus.ATTENDED;
     }
 
     /** Staff-initiated reschedule from the dashboard (KAN-97) - changes the slot, keeps the doctor/patient. */

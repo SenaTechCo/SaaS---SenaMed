@@ -7,6 +7,8 @@ import com.senamed.backend.appointment.dto.AppointmentResponse;
 import com.senamed.backend.auth.dto.AuthResponse;
 import com.senamed.backend.auth.dto.LoginRequest;
 import com.senamed.backend.auth.dto.RegisterClinicRequest;
+import com.senamed.backend.catalog.dto.ServiceOfferingCreateRequest;
+import com.senamed.backend.catalog.dto.ServiceOfferingResponse;
 import com.senamed.backend.common.ApiError;
 import com.senamed.backend.doctor.dto.DoctorAccessResponse;
 import com.senamed.backend.doctor.dto.DoctorCreateRequest;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -56,7 +59,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         Long patientId = createPatient(adminHeaders, "Paciente Cadastrado").id();
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, patientId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Cadastrado", "cadastrado@vinculopaciente.com", null, true);
+                doctorId, patientId, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Cadastrado", "cadastrado@vinculopaciente.com", null, true);
         ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, adminHeaders), AppointmentResponse.class);
 
@@ -72,7 +75,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         Long patientFromB = createPatient(clinicBHeaders, "Paciente De Outra Clinica").id();
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, patientFromB, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@vinculoa.com", null, true);
+                doctorId, patientFromB, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@vinculoa.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, clinicAHeaders), ApiError.class);
 
@@ -98,7 +101,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         Long doctorId = createDoctor(adminHeaders, "Dr. Sem Consentimento", "Clinico Geral").id();
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@staffsemconsentimento.com", null, false);
+                doctorId, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@staffsemconsentimento.com", null, false);
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, adminHeaders), ApiError.class);
 
@@ -113,7 +116,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         Long doctorFromB = createDoctor(clinicBHeaders, "Dr. De Outra Clinica", "Clinico Geral").id();
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorFromB, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@staffa.com", null, true);
+                doctorFromB, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@staffa.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, clinicAHeaders), ApiError.class);
 
@@ -127,7 +130,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         createAppointment(adminHeaders, doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Primeiro", "primeiro@staffconflito.com");
 
         AppointmentCreateRequest secondRequest = new AppointmentCreateRequest(
-                doctorId, null, FUTURE_DATE, LocalTime.of(9, 0), "Segundo", "segundo@staffconflito.com", null, true);
+                doctorId, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Segundo", "segundo@staffconflito.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(secondRequest, adminHeaders), ApiError.class);
 
@@ -137,7 +140,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
     @Test
     void create_withoutToken_returns401() {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                1L, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@semtoken.com", null, true);
+                1L, null, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@semtoken.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.postForEntity(url("/api/appointments"), request, ApiError.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -150,7 +153,7 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         HttpHeaders doctorHeaders = loginHeaders("doutor@staffrestricaomedico.com", "SenhaForte123");
 
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctor.id(), null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@staffrestricaomedico.com", null, true);
+                doctor.id(), null, null, FUTURE_DATE, LocalTime.of(9, 0), "Paciente", "paciente@staffrestricaomedico.com", null, true);
         ResponseEntity<ApiError> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, doctorHeaders), ApiError.class);
 
@@ -244,12 +247,87 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
+    @Test
+    void create_withServiceId_copiesPriceAndServiceName() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Servico Agendamento", "admin@servicoagendamento.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Servico", "Clinico Geral").id();
+        ServiceOfferingResponse service = createServiceOffering(adminHeaders, "Consulta Inicial", "150.00");
+
+        AppointmentCreateRequest request = new AppointmentCreateRequest(
+                doctorId, null, service.id(), FUTURE_DATE, LocalTime.of(9, 0),
+                "Paciente Servico", "servico@servicoagendamento.com", null, true);
+        ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
+                url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, adminHeaders), AppointmentResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().serviceId()).isEqualTo(service.id());
+        assertThat(response.getBody().serviceName()).isEqualTo("Consulta Inicial");
+        assertThat(response.getBody().price()).isEqualByComparingTo(new BigDecimal("150.00"));
+    }
+
+    @Test
+    void markAttended_confirmedAppointment_becomesAttended() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Atender", "admin@atender.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Atender", "Clinico Geral").id();
+        AppointmentResponse appointment = createAppointment(
+                adminHeaders, doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Atender", "atender@atender.com");
+
+        ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/atender"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), AppointmentResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo(AppointmentStatus.ATTENDED);
+    }
+
+    @Test
+    void markAttended_alreadyAttended_returns409() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Atender Duplo", "admin@atenderduplo.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Atender Duplo", "Clinico Geral").id();
+        AppointmentResponse appointment = createAppointment(
+                adminHeaders, doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Atender Duplo", "atenderduplo@atenderduplo.com");
+        restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/atender"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), AppointmentResponse.class);
+
+        ResponseEntity<ApiError> response = restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/atender"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), ApiError.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void markAttended_cancelledAppointment_returns409() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Atender Cancelado", "admin@atendercancelado.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Atender Cancelado", "Clinico Geral").id();
+        AppointmentResponse appointment = createAppointment(
+                adminHeaders, doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Atender Cancelado", "atendercancelado@atendercancelado.com");
+        restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/cancel"), HttpMethod.POST,
+                new HttpEntity<>(adminHeaders), AppointmentResponse.class);
+
+        ResponseEntity<ApiError> response = restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/atender"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), ApiError.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
     private AppointmentResponse createAppointment(
             HttpHeaders headers, Long doctorId, LocalDate date, LocalTime startTime, String patientName, String patientEmail) {
         AppointmentCreateRequest request = new AppointmentCreateRequest(
-                doctorId, null, date, startTime, patientName, patientEmail, "11999998888", true);
+                doctorId, null, null, date, startTime, patientName, patientEmail, "11999998888", true);
         ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
                 url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, headers), AppointmentResponse.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return response.getBody();
+    }
+
+    private ServiceOfferingResponse createServiceOffering(HttpHeaders headers, String name, String price) {
+        ServiceOfferingCreateRequest request = new ServiceOfferingCreateRequest(name, null, 30, new BigDecimal(price));
+        ResponseEntity<ServiceOfferingResponse> response = restTemplate.exchange(
+                url("/api/services"), HttpMethod.POST, new HttpEntity<>(request, headers), ServiceOfferingResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return response.getBody();
     }

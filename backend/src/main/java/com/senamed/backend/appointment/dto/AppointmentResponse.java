@@ -3,6 +3,7 @@ package com.senamed.backend.appointment.dto;
 import com.senamed.backend.appointment.Appointment;
 import com.senamed.backend.appointment.AppointmentStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -18,7 +19,10 @@ public record AppointmentResponse(
         String patientName,
         AppointmentStatus status,
         String cancelToken,
-        Instant confirmedAt) {
+        Instant confirmedAt,
+        Long serviceId,
+        String serviceName,
+        BigDecimal price) {
 
     public static AppointmentResponse from(Appointment appointment) {
         return new AppointmentResponse(
@@ -33,6 +37,9 @@ public record AppointmentResponse(
                 appointment.getPatientName(),
                 appointment.getStatus(),
                 appointment.getCancelToken() != null ? appointment.getCancelToken().toString() : null,
-                appointment.getConfirmedAt());
+                appointment.getConfirmedAt(),
+                appointment.getService() != null ? appointment.getService().getId() : null,
+                appointment.getService() != null ? appointment.getService().getName() : null,
+                appointment.getPrice());
     }
 }

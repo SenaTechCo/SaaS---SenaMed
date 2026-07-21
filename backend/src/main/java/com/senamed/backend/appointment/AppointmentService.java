@@ -3,8 +3,11 @@ package com.senamed.backend.appointment;
 import com.senamed.backend.appointment.dto.AppointmentCreateRequest;
 import com.senamed.backend.appointment.dto.AppointmentRescheduleRequest;
 import com.senamed.backend.appointment.dto.AppointmentResponse;
+import com.senamed.backend.appointment.event.AppointmentAttendedEvent;
 import com.senamed.backend.appointment.event.AppointmentCancelledEvent;
 import com.senamed.backend.appointment.event.AppointmentCreatedEvent;
+import com.senamed.backend.catalog.ServiceOffering;
+import com.senamed.backend.catalog.ServiceOfferingRepository;
 import com.senamed.backend.common.AppointmentConflictException;
 import com.senamed.backend.common.InvalidRequestException;
 import com.senamed.backend.common.ResourceNotFoundException;
@@ -35,16 +38,19 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     private final PatientRepository patientRepository;
+    private final ServiceOfferingRepository serviceOfferingRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public AppointmentService(
             AppointmentRepository appointmentRepository,
             DoctorRepository doctorRepository,
             PatientRepository patientRepository,
+            ServiceOfferingRepository serviceOfferingRepository,
             ApplicationEventPublisher eventPublisher) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
         this.patientRepository = patientRepository;
+        this.serviceOfferingRepository = serviceOfferingRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -97,8 +103,14 @@ public class AppointmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Paciente não encontrado"));
         }
 
+        ServiceOffering service = null;
+        if (request.serviceId() != null) {
+            service = serviceOfferingRepository.findByIdAndClinicId(request.serviceId(), clinicId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado"));
+        }
+
         Appointment appointment = new Appointment(
-                doctor, patient, request.patientName(), request.patientEmail(), request.patientPhone(),
+                doctor, patient, service, request.patientName(), request.patientEmail(), request.patientPhone(),
                 startsAt, endsAt, Instant.now());
         try {
             appointment = appointmentRepository.saveAndFlush(appointment);
@@ -146,6 +158,18 @@ public class AppointmentService {
             throw new AppointmentConflictException(
                     "Já existe um agendamento marcado para este médico neste horário.");
         }
+        return AppointmentResponse.from(appointment);
+    }
+
+    /** Staff marking a patient's appointment as attended (KAN-100) - triggers auto-billing when a service was selected. */
+    @Transactional
+    public AppointmentResponse markAttended(Long id) {
+        Appointment appointment = loadOwn(id);
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new AppointmentConflictException("Só é possível marcar como atendido um agendamento confirmado.");
+        }
+        appointment.markAttended();
+        eventPublisher.publishEvent(new AppointmentAttendedEvent(appointment.getId()));
         return AppointmentResponse.from(appointment);
     }
 
