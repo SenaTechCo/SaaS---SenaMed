@@ -7,6 +7,21 @@ import { apiFetch, ApiError } from '../lib/http';
 import type { Appointment, AppointmentPayload, AppointmentReschedulePayload } from '../types/appointment';
 import type { AvailabilitySlot, Doctor } from '../types/doctor';
 import type { Patient } from '../types/patient';
+import type { ServiceOffering } from '../types/service';
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function appointmentStatusClasses(status: Appointment['status']): string {
+  if (status === 'CONFIRMED') return 'bg-green-50 text-green-700';
+  if (status === 'ATTENDED') return 'bg-blue-50 text-blue-700';
+  return 'bg-slate-100 text-slate-500';
+}
+
+function appointmentStatusLabel(status: Appointment['status']): string {
+  if (status === 'CONFIRMED') return 'Confirmado';
+  if (status === 'ATTENDED') return 'Atendido';
+  return 'Cancelado';
+}
 
 function todayAsInputValue(): string {
   const now = new Date();
@@ -49,6 +64,7 @@ interface CreateForm {
   patientEmail: string;
   patientPhone: string;
   lgpdConsent: boolean;
+  serviceId: number | null;
 }
 
 const emptyCreateForm: CreateForm = {
@@ -59,6 +75,7 @@ const emptyCreateForm: CreateForm = {
   patientEmail: '',
   patientPhone: '',
   lgpdConsent: false,
+  serviceId: null,
 };
 
 interface QuickAddForm {
@@ -84,6 +101,9 @@ export function AppointmentsPage() {
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [services, setServices] = useState<ServiceOffering[]>([]);
+
+  const [attendingId, setAttendingId] = useState<number | null>(null);
 
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientQuery, setPatientQuery] = useState('');
@@ -167,6 +187,25 @@ export function AppointmentsPage() {
       clearTimeout(timer);
     };
   }, [patientQuery]);
+
+  useEffect(() => {
+    if (!showCreateForm) return;
+
+    let cancelled = false;
+    async function loadServices() {
+      try {
+        const list = await apiFetch<ServiceOffering[]>('/api/services');
+        if (!cancelled) setServices(list.filter((service) => service.active));
+      } catch {
+        if (!cancelled) setServices([]);
+      }
+    }
+
+    loadServices();
+    return () => {
+      cancelled = true;
+    };
+  }, [showCreateForm]);
 
   useEffect(() => {
     if (viewMode === 'lista' || filterDoctorId === null) {
@@ -296,6 +335,7 @@ export function AppointmentsPage() {
         patientEmail: createForm.patientEmail,
         patientPhone: createForm.patientPhone.trim() ? createForm.patientPhone.trim() : null,
         lgpdConsent: createForm.lgpdConsent,
+        serviceId: createForm.serviceId,
       };
       const created = await apiFetch<Appointment>('/api/appointments', {
         method: 'POST',
@@ -331,6 +371,19 @@ export function AppointmentsPage() {
       setRowError(err instanceof ApiError ? err.message : 'Não foi possível cancelar o agendamento.');
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function handleMarkAttended(appointment: Appointment) {
+    setRowError(null);
+    setAttendingId(appointment.id);
+    try {
+      const updated = await apiFetch<Appointment>(`/api/appointments/${appointment.id}/atender`, { method: 'PATCH' });
+      setAppointments((prev) => prev.map((a) => (a.id === appointment.id ? updated : a)));
+    } catch (err) {
+      setRowError(err instanceof ApiError ? err.message : 'Não foi possível marcar o agendamento como atendido.');
+    } finally {
+      setAttendingId(null);
     }
   }
 
@@ -548,17 +601,25 @@ export function AppointmentsPage() {
                       </td>
                       <td className="px-5 py-3.5 text-sm">
                         <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            appointment.status === 'CONFIRMED' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
-                          }`}
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${appointmentStatusClasses(
+                            appointment.status,
+                          )}`}
                         >
-                          {appointment.status === 'CONFIRMED' ? 'Confirmado' : 'Cancelado'}
+                          {appointmentStatusLabel(appointment.status)}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-700">{appointment.confirmedAt ? 'Sim' : 'Não'}</td>
                       <td className="px-5 py-3.5 text-sm">
                         {appointment.status === 'CONFIRMED' && (
                           <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleMarkAttended(appointment)}
+                              disabled={attendingId === appointment.id}
+                              className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
+                            >
+                              {attendingId === appointment.id ? 'Marcando...' : 'Marcar como atendido'}
+                            </button>
                             <button
                               type="button"
                               onClick={() => startReschedule(appointment)}
@@ -657,6 +718,42 @@ export function AppointmentsPage() {
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
                   />
                 </div>
+                <div className="col-span-1 sm:col-span-2">
+                  <label htmlFor="create-service" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Serviço (opcional)
+                  </label>
+                  <select
+                    id="create-service"
+                    value={createForm.serviceId ?? ''}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({
+                        ...f,
+                        serviceId: e.target.value ? Number(e.target.value) : null,
+                      }))
+                    }
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+                  >
+                    <option value="">Selecione um serviço</option>
+                    {services.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const selectedService = services.find((service) => Number(service.id) === createForm.serviceId);
+                    if (!selectedService) return null;
+                    return (
+                      <div className="mt-1.5">
+                        <p className="text-sm text-slate-700">Preço: {currencyFormatter.format(selectedService.price)}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Ao marcar este agendamento como atendido, uma conta a receber será gerada automaticamente.
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 <div className="col-span-1 sm:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Paciente</label>
 

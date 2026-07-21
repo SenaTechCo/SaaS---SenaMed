@@ -108,7 +108,9 @@ function minutesToTime(minutes: number): string {
 }
 
 function statusClasses(status: Appointment['status']): string {
-  return status === 'CONFIRMED' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500';
+  if (status === 'CONFIRMED') return 'bg-green-50 text-green-700';
+  if (status === 'ATTENDED') return 'bg-blue-50 text-blue-700';
+  return 'bg-slate-100 text-slate-500';
 }
 
 function isWithinAvailability(minutes: number, daySlots: AvailabilitySlot[]): boolean {

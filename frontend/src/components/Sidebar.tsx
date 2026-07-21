@@ -13,6 +13,7 @@ import {
   Stethoscope,
   UserRound,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,6 +37,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { to: '/dashboard/medicos', icon: Users, label: 'Médicos' },
   { to: '/dashboard/pacientes', icon: UserRound, label: 'Pacientes' },
   { to: '/dashboard/agendamentos', icon: Calendar, label: 'Agendamentos' },
+  { to: '/dashboard/financeiro', icon: Wallet, label: 'Financeiro' },
   { to: '/dashboard/plano', icon: CreditCard, label: 'Plano' },
   { to: '/dashboard/personalizacao', icon: Palette, label: 'Personalização' },
   { to: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },

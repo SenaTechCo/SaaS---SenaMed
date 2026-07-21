@@ -32,6 +32,7 @@ export interface AppointmentPayload {
   patientEmail: string;
   patientPhone: string | null;
   lgpdConsent: boolean;
+  serviceId?: number | null;
 }
 
 export interface AppointmentReschedulePayload {
@@ -39,7 +40,7 @@ export interface AppointmentReschedulePayload {
   startTime: string;
 }
 
-export type AppointmentStatus = 'CONFIRMED' | 'CANCELLED';
+export type AppointmentStatus = 'CONFIRMED' | 'ATTENDED' | 'CANCELLED';
 
 export interface Appointment {
   id: number;
@@ -54,4 +55,7 @@ export interface Appointment {
   status: AppointmentStatus;
   cancelToken: string;
   confirmedAt: string | null;
+  serviceId: number | null;
+  serviceName: string | null;
+  price: number | null;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarCheck, CalendarDays, CreditCard, Users } from 'lucide-react';
+import { CalendarCheck, CalendarDays, CreditCard, TrendingUp, Users, Wallet } from 'lucide-react';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, ApiError } from '../lib/http';
@@ -12,6 +12,8 @@ const CLINIC_STATUS_LABELS: Record<string, string> = {
   PAST_DUE: 'Pagamento atrasado',
   BLOCKED: 'Bloqueada',
 };
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function DashboardPage() {
   const { user, clinic } = useAuth();
@@ -105,6 +107,44 @@ export function DashboardPage() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {summary.pendingReceivablesTotal !== null && (
+              <Link
+                to="/dashboard/financeiro"
+                className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4 hover:shadow-md hover:border-primary-200 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-4.5 h-4.5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {currencyFormatter.format(summary.pendingReceivablesTotal)}
+                    </p>
+                    <p className="text-xs text-slate-500 leading-tight">A receber</p>
+                  </div>
+                </div>
+              </Link>
+            )}
+
+            {summary.paidThisMonthTotal !== null && (
+              <Link
+                to="/dashboard/financeiro"
+                className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4 hover:shadow-md hover:border-primary-200 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="w-4.5 h-4.5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {currencyFormatter.format(summary.paidThisMonthTotal)}
+                    </p>
+                    <p className="text-xs text-slate-500 leading-tight">Recebido este mês</p>
+                  </div>
+                </div>
+              </Link>
             )}
 
             {clinic && (

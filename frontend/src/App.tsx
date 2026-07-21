@@ -8,6 +8,7 @@ import { DoctorAvailabilityPage } from './pages/DoctorAvailabilityPage';
 import { DoctorTimeOffPage } from './pages/DoctorTimeOffPage';
 import { ClinicCustomizationPage } from './pages/ClinicCustomizationPage';
 import { PlanoPage } from './pages/PlanoPage';
+import { FinanceiroPage } from './pages/FinanceiroPage';
 import { PublicClinicPage } from './pages/PublicClinicPage';
 import { CancelAppointmentPage } from './pages/CancelAppointmentPage';
 import { ConfirmAppointmentPage } from './pages/ConfirmAppointmentPage';
@@ -81,6 +82,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <PlanoPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/financeiro"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <FinanceiroPage />
           </ProtectedRoute>
         }
       />
