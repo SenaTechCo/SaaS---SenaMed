@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DoctorsPage } from './pages/DoctorsPage';
 import { PatientsPage } from './pages/PatientsPage';
+import { PatientDetailPage } from './pages/PatientDetailPage';
 import { DoctorAvailabilityPage } from './pages/DoctorAvailabilityPage';
 import { DoctorTimeOffPage } from './pages/DoctorTimeOffPage';
 import { ClinicCustomizationPage } from './pages/ClinicCustomizationPage';
@@ -66,6 +67,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <PatientsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/pacientes/:id"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <PatientDetailPage />
           </ProtectedRoute>
         }
       />

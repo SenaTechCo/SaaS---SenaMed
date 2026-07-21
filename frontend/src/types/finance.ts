@@ -1,6 +1,7 @@
 export interface Receivable {
   id: number;
   appointmentId: number;
+  patientId: number | null;
   patientName: string;
   doctorName: string;
   description: string;

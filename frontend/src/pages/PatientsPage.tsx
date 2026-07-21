@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Pencil, Plus, RotateCcw, Search, UserRound, X } from 'lucide-react';
 import { DashboardLayout } from '../components/DashboardLayout';
+import { PatientFields } from '../components/patients/PatientFields';
 import { apiFetch, ApiError } from '../lib/http';
 import type { Patient, PatientPayload } from '../types/patient';
+import type { Appointment } from '../types/appointment';
+import type { Receivable } from '../types/finance';
+import type { Doctor } from '../types/doctor';
 
 const emptyForm: PatientPayload = {
   name: '',
@@ -46,22 +51,61 @@ function toPayload(form: PatientPayload): PatientPayload {
   };
 }
 
+type PaymentStatusFilter = 'TODOS' | 'PENDENTE' | 'EM_DIA';
+type PaymentStatus = 'Pendente' | 'Em dia' | '—';
+
+function computeAge(birthDate: string): number {
+  const [year, month, day] = birthDate.split('-').map(Number);
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const hadBirthdayThisYear =
+    today.getMonth() + 1 > month || (today.getMonth() + 1 === month && today.getDate() >= day);
+  if (!hadBirthdayThisYear) age -= 1;
+  return age;
+}
+
+function computeAgeGroup(birthDate: string | null): string {
+  if (!birthDate) return 'Não informado';
+  const age = computeAge(birthDate);
+  if (age < 12) return 'Infantil';
+  if (age < 18) return 'Adolescente';
+  if (age < 60) return 'Adulto';
+  return 'Idoso';
+}
+
+interface DerivedPatientData {
+  sessionCount: number;
+  ageGroup: string;
+  paymentStatus: PaymentStatus;
+  treatedByDoctorIds: Set<number>;
+}
+
+const PAYMENT_BADGE_CLASSES: Record<PaymentStatus, string> = {
+  Pendente: 'bg-amber-50 text-amber-700',
+  'Em dia': 'bg-green-50 text-green-700',
+  '—': 'bg-slate-100 text-slate-500',
+};
+
 export function PatientsPage() {
+  const navigate = useNavigate();
+
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSlow, setIsSlow] = useState(false);
   const [search, setSearch] = useState('');
 
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>('TODOS');
+  const [doctorFilter, setDoctorFilter] = useState<string>('');
+  const [showArchived, setShowArchived] = useState(false);
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState<PatientPayload>(emptyForm);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<PatientPayload>(emptyForm);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [rowError, setRowError] = useState<string | null>(null);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
@@ -79,9 +123,17 @@ export function PatientsPage() {
       setIsSlow(false);
       try {
         const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
-        const list = await apiFetch<Patient[]>(`/api/patients${query}`);
+        const [patientsList, appointmentsList, receivablesList, doctorsList] = await Promise.all([
+          apiFetch<Patient[]>(`/api/patients${query}`),
+          apiFetch<Appointment[]>('/api/appointments'),
+          apiFetch<Receivable[]>('/api/finance/receivables'),
+          apiFetch<Doctor[]>('/api/doctors'),
+        ]);
         if (cancelled) return;
-        setPatients(list);
+        setPatients(patientsList);
+        setAppointments(appointmentsList);
+        setReceivables(receivablesList);
+        setDoctors(doctorsList);
       } catch (err) {
         if (cancelled) return;
         setLoadError(err instanceof ApiError ? err.message : 'Não foi possível carregar os pacientes.');
@@ -97,6 +149,46 @@ export function PatientsPage() {
       clearTimeout(debounce);
     };
   }, [search]);
+
+  const derivedByPatientId = useMemo(() => {
+    const map = new Map<string, DerivedPatientData>();
+    for (const patient of patients) {
+      const patientIdNum = Number(patient.id);
+      const patientAppointments = appointments.filter((a) => a.patientId === patientIdNum);
+      const patientReceivables = receivables.filter((r) => r.patientId === patientIdNum);
+
+      let paymentStatus: PaymentStatus = '—';
+      if (patientReceivables.some((r) => r.status === 'PENDING')) {
+        paymentStatus = 'Pendente';
+      } else if (patientReceivables.some((r) => r.status === 'PAID')) {
+        paymentStatus = 'Em dia';
+      }
+
+      map.set(patient.id, {
+        sessionCount: patientAppointments.length,
+        ageGroup: computeAgeGroup(patient.birthDate),
+        paymentStatus,
+        treatedByDoctorIds: new Set(patientAppointments.map((a) => a.doctorId)),
+      });
+    }
+    return map;
+  }, [patients, appointments, receivables]);
+
+  const filteredPatients = useMemo(() => {
+    return patients.filter((patient) => {
+      if (!showArchived && !patient.active) return false;
+
+      const derived = derivedByPatientId.get(patient.id);
+      if (!derived) return true;
+
+      if (paymentStatusFilter === 'PENDENTE' && derived.paymentStatus !== 'Pendente') return false;
+      if (paymentStatusFilter === 'EM_DIA' && derived.paymentStatus !== 'Em dia') return false;
+
+      if (doctorFilter && !derived.treatedByDoctorIds.has(Number(doctorFilter))) return false;
+
+      return true;
+    });
+  }, [patients, derivedByPatientId, paymentStatusFilter, doctorFilter, showArchived]);
 
   function openCreateForm() {
     setCreateForm(emptyForm);
@@ -120,53 +212,6 @@ export function PatientsPage() {
       setCreateError(err instanceof ApiError ? err.message : 'Não foi possível cadastrar o paciente. Tente novamente.');
     } finally {
       setIsCreating(false);
-    }
-  }
-
-  function startEdit(patient: Patient) {
-    setEditingId(patient.id);
-    setEditForm({
-      name: patient.name,
-      socialName: patient.socialName,
-      birthDate: patient.birthDate,
-      sex: patient.sex,
-      cpf: patient.cpf,
-      email: patient.email,
-      phone: patient.phone,
-      zipCode: patient.zipCode,
-      street: patient.street,
-      number: patient.number,
-      complement: patient.complement,
-      neighborhood: patient.neighborhood,
-      city: patient.city,
-      state: patient.state,
-      referralSource: patient.referralSource,
-      notes: patient.notes,
-      lgpdConsent: patient.lgpdConsent,
-    });
-    setEditError(null);
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setEditError(null);
-  }
-
-  async function handleSaveEdit(event: FormEvent<HTMLFormElement>, patientId: string) {
-    event.preventDefault();
-    setEditError(null);
-    setIsSavingEdit(true);
-    try {
-      const updated = await apiFetch<Patient>(`/api/patients/${patientId}`, {
-        method: 'PUT',
-        body: toPayload(editForm),
-      });
-      setPatients((prev) => prev.map((p) => (p.id === patientId ? updated : p)));
-      setEditingId(null);
-    } catch (err) {
-      setEditError(err instanceof ApiError ? err.message : 'Não foi possível salvar as alterações.');
-    } finally {
-      setIsSavingEdit(false);
     }
   }
 
@@ -199,8 +244,6 @@ export function PatientsPage() {
     }
   }
 
-  const editingPatient = editingId !== null ? patients.find((p) => p.id === editingId) : undefined;
-
   return (
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
@@ -217,7 +260,7 @@ export function PatientsPage() {
         </button>
       </div>
 
-      <div className="relative mb-6 max-w-sm">
+      <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
@@ -226,6 +269,41 @@ export function PatientsPage() {
           placeholder="Buscar por nome..."
           className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 transition-all"
         />
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <select
+          value={paymentStatusFilter}
+          onChange={(e) => setPaymentStatusFilter(e.target.value as PaymentStatusFilter)}
+          className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+        >
+          <option value="TODOS">Status do pagamento: Todos</option>
+          <option value="PENDENTE">Pendente</option>
+          <option value="EM_DIA">Em dia</option>
+        </select>
+
+        <select
+          value={doctorFilter}
+          onChange={(e) => setDoctorFilter(e.target.value)}
+          className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
+        >
+          <option value="">Atendido por: Todos os médicos</option>
+          {doctors.map((doctor) => (
+            <option key={doctor.id} value={doctor.id}>
+              {doctor.name}
+            </option>
+          ))}
+        </select>
+
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-200"
+          />
+          Mostrar arquivados
+        </label>
       </div>
 
       {showCreateForm && (
@@ -269,49 +347,6 @@ export function PatientsPage() {
         </div>
       )}
 
-      {editingId !== null && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Editar paciente{editingPatient ? ` — ${editingPatient.name}` : ''}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={(e) => handleSaveEdit(e, editingId)} noValidate className="p-6 space-y-4">
-              {editError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{editError}</div>
-              )}
-              <PatientFields form={editForm} setForm={setEditForm} idPrefix="edit" />
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingEdit}
-                  className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 shadow-sm disabled:opacity-50 transition-all"
-                >
-                  {isSavingEdit ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {isLoading && (
         <div className="flex flex-col items-center gap-3 py-24">
           <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
@@ -331,7 +366,7 @@ export function PatientsPage() {
 
       {!isLoading && !loadError && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.06)] overflow-hidden">
-          {patients.length === 0 ? (
+          {filteredPatients.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
@@ -347,69 +382,69 @@ export function PatientsPage() {
               <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-100">
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nome</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contato</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cidade/UF</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ações</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nome</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Telefone</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sessões</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Grupo</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status do pagamento</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.map((patient) => (
-                    <tr key={patient.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80 transition-colors">
-                      <td className="px-5 py-3.5 text-sm text-slate-700 font-medium">
-                        {patient.name}
-                        {patient.socialName && <div className="text-slate-500 font-normal">{patient.socialName}</div>}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-700">
-                        <div>{patient.email ?? '—'}</div>
-                        <div className="text-slate-500">{patient.phone ?? '—'}</div>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-700">
-                        {patient.city ? `${patient.city}${patient.state ? `/${patient.state}` : ''}` : '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm">
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            patient.active ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {patient.active ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(patient)}
-                            className="p-1.5 rounded-lg hover:bg-primary-50 text-slate-400 hover:text-primary-600 transition-colors"
-                            aria-label={`Editar ${patient.name}`}
+                  {filteredPatients.map((patient) => {
+                    const derived = derivedByPatientId.get(patient.id);
+                    return (
+                      <tr key={patient.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80 transition-colors">
+                        <td className="px-5 py-3.5 text-sm">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/dashboard/pacientes/${patient.id}`)}
+                              className="p-1.5 rounded-lg hover:bg-primary-50 text-slate-400 hover:text-primary-600 transition-colors"
+                              aria-label={`Editar ${patient.name}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            {patient.active ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDeactivate(patient)}
+                                disabled={deactivatingId === patient.id}
+                                className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                              >
+                                {deactivatingId === patient.id ? 'Inativando...' : 'Inativar'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRestore(patient)}
+                                disabled={restoringId === patient.id}
+                                className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" /> {restoringId === patient.id ? 'Restaurando...' : 'Restaurar'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700 font-medium">
+                          {patient.name}
+                          {patient.socialName && <div className="text-slate-500 font-normal">{patient.socialName}</div>}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700">{patient.phone ?? '—'}</td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700">{derived?.sessionCount ?? 0}</td>
+                        <td className="px-5 py-3.5 text-sm text-slate-700">{derived?.ageGroup ?? 'Não informado'}</td>
+                        <td className="px-5 py-3.5 text-sm">
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              PAYMENT_BADGE_CLASSES[derived?.paymentStatus ?? '—']
+                            }`}
                           >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          {patient.active ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDeactivate(patient)}
-                              disabled={deactivatingId === patient.id}
-                              className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
-                            >
-                              {deactivatingId === patient.id ? 'Inativando...' : 'Inativar'}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleRestore(patient)}
-                              disabled={restoringId === patient.id}
-                              className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" /> {restoringId === patient.id ? 'Restaurando...' : 'Restaurar'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {derived?.paymentStatus ?? '—'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -417,207 +452,5 @@ export function PatientsPage() {
         </div>
       )}
     </DashboardLayout>
-  );
-}
-
-const fieldClassName =
-  'w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all';
-const labelClassName = 'block text-sm font-medium text-slate-700 mb-1.5';
-
-function PatientFields({
-  form,
-  setForm,
-  idPrefix,
-}: {
-  form: PatientPayload;
-  setForm: (updater: (f: PatientPayload) => PatientPayload) => void;
-  idPrefix: string;
-}) {
-  return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor={`${idPrefix}-name`} className={labelClassName}>Nome</label>
-          <input
-            id={`${idPrefix}-name`}
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            required
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-social-name`} className={labelClassName}>Nome social (opcional)</label>
-          <input
-            id={`${idPrefix}-social-name`}
-            type="text"
-            value={form.socialName ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, socialName: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-birth-date`} className={labelClassName}>Data de nascimento</label>
-          <input
-            id={`${idPrefix}-birth-date`}
-            type="date"
-            value={form.birthDate ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-sex`} className={labelClassName}>Sexo</label>
-          <select
-            id={`${idPrefix}-sex`}
-            value={form.sex ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, sex: e.target.value || null }))}
-            className={fieldClassName}
-          >
-            <option value="">Não informado</option>
-            <option value="F">Feminino</option>
-            <option value="M">Masculino</option>
-            <option value="O">Outro</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-cpf`} className={labelClassName}>CPF</label>
-          <input
-            id={`${idPrefix}-cpf`}
-            type="text"
-            value={form.cpf ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, cpf: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-email`} className={labelClassName}>E-mail</label>
-          <input
-            id={`${idPrefix}-email`}
-            type="email"
-            value={form.email ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-phone`} className={labelClassName}>Telefone</label>
-          <input
-            id={`${idPrefix}-phone`}
-            type="tel"
-            value={form.phone ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-referral`} className={labelClassName}>Como conheceu a clínica</label>
-          <input
-            id={`${idPrefix}-referral`}
-            type="text"
-            value={form.referralSource ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, referralSource: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-      </div>
-
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider pt-2">Endereço</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label htmlFor={`${idPrefix}-zip`} className={labelClassName}>CEP</label>
-          <input
-            id={`${idPrefix}-zip`}
-            type="text"
-            value={form.zipCode ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <label htmlFor={`${idPrefix}-street`} className={labelClassName}>Logradouro</label>
-          <input
-            id={`${idPrefix}-street`}
-            type="text"
-            value={form.street ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-number`} className={labelClassName}>Número</label>
-          <input
-            id={`${idPrefix}-number`}
-            type="text"
-            value={form.number ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-complement`} className={labelClassName}>Complemento</label>
-          <input
-            id={`${idPrefix}-complement`}
-            type="text"
-            value={form.complement ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, complement: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-neighborhood`} className={labelClassName}>Bairro</label>
-          <input
-            id={`${idPrefix}-neighborhood`}
-            type="text"
-            value={form.neighborhood ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, neighborhood: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-city`} className={labelClassName}>Cidade</label>
-          <input
-            id={`${idPrefix}-city`}
-            type="text"
-            value={form.city ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-state`} className={labelClassName}>UF</label>
-          <input
-            id={`${idPrefix}-state`}
-            type="text"
-            maxLength={2}
-            value={form.state ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, state: e.target.value.toUpperCase() }))}
-            className={fieldClassName}
-          />
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor={`${idPrefix}-notes`} className={labelClassName}>Observações</label>
-        <textarea
-          id={`${idPrefix}-notes`}
-          value={form.notes ?? ''}
-          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          rows={3}
-          className={`${fieldClassName} resize-vertical`}
-        />
-      </div>
-
-      <label className="flex items-start gap-2 text-sm text-slate-600">
-        <input
-          type="checkbox"
-          checked={form.lgpdConsent}
-          onChange={(e) => setForm((f) => ({ ...f, lgpdConsent: e.target.checked }))}
-          className="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-200"
-        />
-        Paciente autorizou o uso dos seus dados, conforme a LGPD.
-      </label>
-    </>
   );
 }
