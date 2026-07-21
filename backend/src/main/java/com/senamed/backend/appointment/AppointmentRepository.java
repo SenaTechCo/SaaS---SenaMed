@@ -21,4 +21,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     /** Backs the doctor's own-agenda view (KAN-77): a doctor's own appointments within their clinic. */
     List<Appointment> findAllByClinicIdAndDoctorIdOrderByStartsAtAsc(Long clinicId, Long doctorId);
+
+    /** Backs the dashboard reports (KAN-102): all of a clinic's appointments starting within a date range. */
+    List<Appointment> findAllByClinicIdAndStartsAtBetween(Long clinicId, LocalDateTime start, LocalDateTime end);
 }

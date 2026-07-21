@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -87,7 +86,7 @@ public class CommissionService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal percentage = getConfig(doctorId).percentage();
-        BigDecimal commissionAmount = totalBilled.multiply(percentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal commissionAmount = CommissionCalculator.apply(totalBilled, percentage);
 
         return new CommissionCalculationResponse(doctorId, year, month, percentage, totalBilled, commissionAmount);
     }

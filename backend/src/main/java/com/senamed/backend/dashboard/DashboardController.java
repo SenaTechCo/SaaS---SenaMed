@@ -1,8 +1,10 @@
 package com.senamed.backend.dashboard;
 
+import com.senamed.backend.dashboard.dto.DashboardReportsResponse;
 import com.senamed.backend.dashboard.dto.DashboardSummaryResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -18,5 +20,10 @@ public class DashboardController {
     @GetMapping("/summary")
     public DashboardSummaryResponse summary() {
         return dashboardService.getSummary();
+    }
+
+    @GetMapping("/reports")
+    public DashboardReportsResponse reports(@RequestParam(defaultValue = "14") int days) {
+        return dashboardService.getReports(days);
     }
 }

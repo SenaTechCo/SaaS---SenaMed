@@ -14,9 +14,11 @@ import com.senamed.backend.doctor.dto.DoctorAccessResponse;
 import com.senamed.backend.doctor.dto.DoctorCreateRequest;
 import com.senamed.backend.doctor.dto.DoctorResponse;
 import com.senamed.backend.doctor.dto.GrantDoctorAccessRequest;
+import com.senamed.backend.finance.dto.ReceivableResponse;
 import com.senamed.backend.patient.dto.PatientCreateRequest;
 import com.senamed.backend.patient.dto.PatientResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -312,6 +315,63 @@ class AppointmentStaffManagementIntegrationTest extends AbstractIntegrationTest 
                 new HttpEntity<>(adminHeaders), ApiError.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void markNoShow_confirmedAppointment_becomesNoShow() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Falta", "admin@falta.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Falta", "Clinico Geral").id();
+        AppointmentResponse appointment = createAppointment(
+                adminHeaders, doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Falta", "falta@falta.com");
+
+        ResponseEntity<AppointmentResponse> response = restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/faltou"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), AppointmentResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo(AppointmentStatus.NO_SHOW);
+    }
+
+    @Test
+    void markNoShow_alreadyAttended_returns409() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Falta Atendido", "admin@faltaatendido.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Falta Atendido", "Clinico Geral").id();
+        AppointmentResponse appointment = createAppointment(
+                adminHeaders, doctorId, FUTURE_DATE, LocalTime.of(9, 0), "Paciente Falta Atendido", "faltaatendido@faltaatendido.com");
+        restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/atender"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), AppointmentResponse.class);
+
+        ResponseEntity<ApiError> response = restTemplate.exchange(
+                url("/api/appointments/" + appointment.id() + "/faltou"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), ApiError.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void markNoShow_doesNotCreateReceivable() {
+        HttpHeaders adminHeaders = authHeadersForNewClinic("Clinica Falta Financeiro", "admin@faltafinanceiro.com");
+        Long doctorId = createDoctor(adminHeaders, "Dr. Falta Financeiro", "Clinico Geral").id();
+        ServiceOfferingResponse service = createServiceOffering(adminHeaders, "Consulta Falta", "150.00");
+
+        AppointmentCreateRequest request = new AppointmentCreateRequest(
+                doctorId, null, service.id(), FUTURE_DATE, LocalTime.of(9, 0),
+                "Paciente Falta Financeiro", "faltafinanceiro@faltafinanceiro.com", null, true);
+        ResponseEntity<AppointmentResponse> createResponse = restTemplate.exchange(
+                url("/api/appointments"), HttpMethod.POST, new HttpEntity<>(request, adminHeaders), AppointmentResponse.class);
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        restTemplate.exchange(
+                url("/api/appointments/" + createResponse.getBody().id() + "/faltou"), HttpMethod.PATCH,
+                new HttpEntity<>(adminHeaders), AppointmentResponse.class);
+
+        ResponseEntity<List<ReceivableResponse>> receivablesResponse = restTemplate.exchange(
+                url("/api/finance/receivables"), HttpMethod.GET, new HttpEntity<>(adminHeaders),
+                new ParameterizedTypeReference<List<ReceivableResponse>>() {
+                });
+        assertThat(receivablesResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(receivablesResponse.getBody()).isEmpty();
     }
 
     private AppointmentResponse createAppointment(

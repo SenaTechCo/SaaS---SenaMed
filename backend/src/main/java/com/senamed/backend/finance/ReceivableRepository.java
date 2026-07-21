@@ -22,4 +22,7 @@ public interface ReceivableRepository extends JpaRepository<Receivable, Long> {
     /** Used to compute a doctor's commission for a given month (the range is the caller's responsibility). */
     List<Receivable> findAllByClinicIdAndDoctorIdAndCreatedAtBetween(
             Long clinicId, Long doctorId, Instant start, Instant end);
+
+    /** Backs the dashboard reports (KAN-102): all of a clinic's receivables created within a date range. */
+    List<Receivable> findAllByClinicIdAndCreatedAtBetween(Long clinicId, Instant start, Instant end);
 }

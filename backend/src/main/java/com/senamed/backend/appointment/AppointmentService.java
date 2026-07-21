@@ -173,6 +173,17 @@ public class AppointmentService {
         return AppointmentResponse.from(appointment);
     }
 
+    /** Staff marking a patient's appointment as a no-show (KAN-101) - no financial side effect, unlike {@link #markAttended}. */
+    @Transactional
+    public AppointmentResponse markNoShow(Long id) {
+        Appointment appointment = loadOwn(id);
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new AppointmentConflictException("Só é possível marcar falta em um agendamento confirmado.");
+        }
+        appointment.markNoShow();
+        return AppointmentResponse.from(appointment);
+    }
+
     private Appointment loadOwn(Long id) {
         Long clinicId = TenantContext.currentClinicId();
         Appointment appointment = appointmentRepository.findById(id)

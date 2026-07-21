@@ -50,4 +50,9 @@ public class AppointmentController {
     public AppointmentResponse markAttended(@PathVariable Long id) {
         return appointmentService.markAttended(id);
     }
+
+    @PatchMapping("/{id}/faltou")
+    public AppointmentResponse markNoShow(@PathVariable Long id) {
+        return appointmentService.markNoShow(id);
+    }
 }

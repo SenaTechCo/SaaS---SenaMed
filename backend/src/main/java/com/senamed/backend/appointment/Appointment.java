@@ -229,6 +229,10 @@ public class Appointment extends TenantScopedEntity {
         this.status = AppointmentStatus.ATTENDED;
     }
 
+    public void markNoShow() {
+        this.status = AppointmentStatus.NO_SHOW;
+    }
+
     /** Staff-initiated reschedule from the dashboard (KAN-97) - changes the slot, keeps the doctor/patient. */
     public void reschedule(LocalDateTime startsAt, LocalDateTime endsAt) {
         this.startsAt = startsAt;
