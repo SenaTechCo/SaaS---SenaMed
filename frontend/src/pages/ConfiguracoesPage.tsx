@@ -4,9 +4,15 @@ import { DashboardLayout } from '../components/DashboardLayout';
 import { ServicosTab } from '../components/configuracoes/ServicosTab';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, ApiError } from '../lib/http';
-import type { User } from '../types/auth';
+import type { User, UserRole } from '../types/auth';
 
 type Tab = 'conta' | 'seguranca' | 'servicos';
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrador',
+  DOCTOR: 'Médico',
+  STAFF: 'Equipe',
+};
 
 interface AccountForm {
   name: string;
@@ -201,7 +207,7 @@ export function ConfiguracoesPage() {
             <div>
               <span className="block text-sm font-medium text-slate-700 mb-1.5">Perfil</span>
               <span className="inline-block px-2.5 py-0.5 bg-primary-50 text-primary-700 text-xs font-semibold rounded-full">
-                {user?.role === 'ADMIN' ? 'Administrador' : 'Médico'}
+                {user ? ROLE_LABELS[user.role] : ''}
               </span>
             </div>
 

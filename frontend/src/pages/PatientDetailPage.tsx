@@ -358,7 +358,11 @@ export function PatientDetailPage() {
                         {appointment.startTime} — {appointment.endTime}
                       </div>
                       <div className="flex-1 min-w-[160px] text-sm text-slate-700">{appointment.doctorName}</div>
-                      <div className="flex-1 min-w-[140px] text-sm text-slate-700">{appointment.serviceName ?? '—'}</div>
+                      <div className="flex-1 min-w-[140px] text-sm text-slate-700">
+                        {appointment.services.length > 0
+                          ? appointment.services.map((s) => s.serviceName).join(', ')
+                          : '—'}
+                      </div>
                       <span
                         className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${appointmentStatusClasses(
                           appointment.status,

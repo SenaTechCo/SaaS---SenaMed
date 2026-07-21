@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { CadastroPage } from './pages/CadastroPage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { DoctorsPage } from './pages/DoctorsPage';
+import { UsersPage } from './pages/UsersPage';
 import { PatientsPage } from './pages/PatientsPage';
 import { PatientDetailPage } from './pages/PatientDetailPage';
 import { DoctorAvailabilityPage } from './pages/DoctorAvailabilityPage';
@@ -39,25 +39,25 @@ function App() {
         }
       />
       <Route
-        path="/dashboard/medicos"
+        path="/dashboard/usuarios"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <DoctorsPage />
+          <ProtectedRoute requiredPermission="MANAGE_USERS">
+            <UsersPage />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/dashboard/medicos/:id/horarios"
+        path="/dashboard/usuarios/:id/horarios"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute requiredPermission="MANAGE_USERS">
             <DoctorAvailabilityPage />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/dashboard/medicos/:id/folgas"
+        path="/dashboard/usuarios/:id/folgas"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute requiredPermission="MANAGE_USERS">
             <DoctorTimeOffPage />
           </ProtectedRoute>
         }
@@ -65,7 +65,7 @@ function App() {
       <Route
         path="/dashboard/pacientes"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute requiredPermission="MANAGE_PATIENTS">
             <PatientsPage />
           </ProtectedRoute>
         }
@@ -73,7 +73,7 @@ function App() {
       <Route
         path="/dashboard/pacientes/:id"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute requiredPermission="MANAGE_PATIENTS">
             <PatientDetailPage />
           </ProtectedRoute>
         }
@@ -81,7 +81,7 @@ function App() {
       <Route
         path="/dashboard/agendamentos"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute requiredPermission="MANAGE_APPOINTMENTS">
             <AppointmentsPage />
           </ProtectedRoute>
         }
@@ -97,7 +97,7 @@ function App() {
       <Route
         path="/dashboard/financeiro"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute requiredPermission="MANAGE_FINANCE">
             <FinanceiroPage />
           </ProtectedRoute>
         }

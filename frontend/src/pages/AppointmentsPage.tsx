@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Eye, Plus, X } from 'lucide-react';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { AppointmentCalendar } from '../components/AppointmentCalendar';
+import { AppointmentDetailModal } from '../components/appointments/AppointmentDetailModal';
 import { apiFetch, ApiError } from '../lib/http';
-import type { Appointment, AppointmentPayload, AppointmentReschedulePayload } from '../types/appointment';
+import type { Appointment, AppointmentReschedulePayload } from '../types/appointment';
 import type { AvailabilitySlot, Doctor } from '../types/doctor';
-import type { Patient } from '../types/patient';
-import type { ServiceOffering } from '../types/service';
-
-const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function appointmentStatusClasses(status: Appointment['status']): string {
   if (status === 'CONFIRMED') return 'bg-green-50 text-green-700';
@@ -58,39 +55,9 @@ function startOfWeekLocal(date: Date): Date {
 
 type ViewMode = 'lista' | 'mes' | 'semana' | 'dia';
 
-interface CreateForm {
-  doctorId: string;
-  date: string;
-  startTime: string;
-  patientName: string;
-  patientEmail: string;
-  patientPhone: string;
-  lgpdConsent: boolean;
-  serviceId: number | null;
-}
-
-const emptyCreateForm: CreateForm = {
-  doctorId: '',
-  date: '',
-  startTime: '',
-  patientName: '',
-  patientEmail: '',
-  patientPhone: '',
-  lgpdConsent: false,
-  serviceId: null,
-};
-
-interface QuickAddForm {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-const emptyQuickAddForm: QuickAddForm = {
-  name: '',
-  email: '',
-  phone: '',
-};
+type DetailModalState =
+  | { mode: 'create'; initialDoctorId: number | null; initialDate: string; initialStartTime: string | null }
+  | { mode: 'view'; appointmentId: number };
 
 export function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -99,23 +66,10 @@ export function AppointmentsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSlow, setIsSlow] = useState(false);
 
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [services, setServices] = useState<ServiceOffering[]>([]);
+  const [detailModal, setDetailModal] = useState<DetailModalState | null>(null);
 
   const [attendingId, setAttendingId] = useState<number | null>(null);
   const [markingNoShowId, setMarkingNoShowId] = useState<number | null>(null);
-
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [patientQuery, setPatientQuery] = useState('');
-  const [patientResults, setPatientResults] = useState<Patient[]>([]);
-  const [isSearchingPatient, setIsSearchingPatient] = useState(false);
-  const [showQuickAddPatient, setShowQuickAddPatient] = useState(false);
-  const [quickAddForm, setQuickAddForm] = useState<QuickAddForm>(emptyQuickAddForm);
-  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
-  const [quickAddError, setQuickAddError] = useState<string | null>(null);
 
   const [rowError, setRowError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -164,53 +118,6 @@ export function AppointmentsPage() {
   }, []);
 
   useEffect(() => {
-    if (patientQuery.trim().length < 2) {
-      setPatientResults([]);
-      setIsSearchingPatient(false);
-      return;
-    }
-
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      setIsSearchingPatient(true);
-      try {
-        const results = await apiFetch<Patient[]>(`/api/patients?search=${encodeURIComponent(patientQuery.trim())}`);
-        if (cancelled) return;
-        setPatientResults(results);
-      } catch {
-        if (cancelled) return;
-        setPatientResults([]);
-      } finally {
-        if (!cancelled) setIsSearchingPatient(false);
-      }
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [patientQuery]);
-
-  useEffect(() => {
-    if (!showCreateForm) return;
-
-    let cancelled = false;
-    async function loadServices() {
-      try {
-        const list = await apiFetch<ServiceOffering[]>('/api/services');
-        if (!cancelled) setServices(list.filter((service) => service.active));
-      } catch {
-        if (!cancelled) setServices([]);
-      }
-    }
-
-    loadServices();
-    return () => {
-      cancelled = true;
-    };
-  }, [showCreateForm]);
-
-  useEffect(() => {
     if (viewMode === 'lista' || filterDoctorId === null) {
       setFilterAvailability([]);
       return;
@@ -234,131 +141,30 @@ export function AppointmentsPage() {
 
   const activeDoctors = doctors.filter((doctor) => doctor.active);
 
-  function resetPatientPicker() {
-    setSelectedPatient(null);
-    setPatientQuery('');
-    setPatientResults([]);
-    setIsSearchingPatient(false);
-    setShowQuickAddPatient(false);
-    setQuickAddForm(emptyQuickAddForm);
-    setIsCreatingPatient(false);
-    setQuickAddError(null);
-  }
-
-  function handleSelectPatient(patient: Patient) {
-    setSelectedPatient(patient);
-    setCreateForm((f) => ({
-      ...f,
-      patientName: patient.name,
-      patientEmail: patient.email ?? '',
-      patientPhone: patient.phone ?? '',
-    }));
-  }
-
-  function handleClearPatient() {
-    setSelectedPatient(null);
-    setPatientQuery('');
-    setPatientResults([]);
-    setShowQuickAddPatient(false);
-    setQuickAddForm(emptyQuickAddForm);
-    setQuickAddError(null);
-  }
-
-  function openQuickAddPatient() {
-    setShowQuickAddPatient(true);
-    setQuickAddForm({ name: patientQuery, email: '', phone: '' });
-    setQuickAddError(null);
-  }
-
-  async function handleQuickAddPatient() {
-    setQuickAddError(null);
-    setIsCreatingPatient(true);
-    try {
-      const created = await apiFetch<Patient>('/api/patients', {
-        method: 'POST',
-        body: {
-          name: quickAddForm.name,
-          socialName: null,
-          birthDate: null,
-          sex: null,
-          cpf: null,
-          email: quickAddForm.email || null,
-          phone: quickAddForm.phone || null,
-          zipCode: null,
-          street: null,
-          number: null,
-          complement: null,
-          neighborhood: null,
-          city: null,
-          state: null,
-          referralSource: null,
-          notes: null,
-          lgpdConsent: createForm.lgpdConsent,
-        },
-      });
-      handleSelectPatient(created);
-      setShowQuickAddPatient(false);
-      setQuickAddForm(emptyQuickAddForm);
-      setPatientQuery('');
-      setPatientResults([]);
-    } catch (err) {
-      setQuickAddError(err instanceof ApiError ? err.message : 'Não foi possível cadastrar o paciente. Tente novamente.');
-    } finally {
-      setIsCreatingPatient(false);
-    }
-  }
-
-  function openCreateForm(prefill?: { doctorId?: number | null; date?: string; startTime?: string | null }) {
-    setCreateForm({
-      ...emptyCreateForm,
-      doctorId: prefill?.doctorId != null ? String(prefill.doctorId) : emptyCreateForm.doctorId,
-      date: prefill?.date ?? emptyCreateForm.date,
-      startTime: prefill?.startTime ?? emptyCreateForm.startTime,
+  function openCreateModal(prefill?: { doctorId?: number | null; date?: string; startTime?: string | null }) {
+    setDetailModal({
+      mode: 'create',
+      initialDoctorId: prefill?.doctorId ?? null,
+      initialDate: prefill?.date ?? '',
+      initialStartTime: prefill?.startTime ?? null,
     });
-    setCreateError(null);
-    resetPatientPicker();
-    setShowCreateForm(true);
+  }
+
+  function openViewModal(appointment: Appointment) {
+    setDetailModal({ mode: 'view', appointmentId: appointment.id });
   }
 
   function handleSlotClick(params: { doctorId: number | null; date: string; time: string | null }) {
-    openCreateForm({ doctorId: params.doctorId, date: params.date, startTime: params.time });
+    openCreateModal({ doctorId: params.doctorId, date: params.date, startTime: params.time });
   }
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setCreateError(null);
-    setIsCreating(true);
-    try {
-      const payload: AppointmentPayload = {
-        doctorId: Number(createForm.doctorId),
-        date: createForm.date,
-        startTime: createForm.startTime,
-        patientId: selectedPatient ? Number(selectedPatient.id) : null,
-        patientName: createForm.patientName,
-        patientEmail: createForm.patientEmail,
-        patientPhone: createForm.patientPhone.trim() ? createForm.patientPhone.trim() : null,
-        lgpdConsent: createForm.lgpdConsent,
-        serviceId: createForm.serviceId,
-      };
-      const created = await apiFetch<Appointment>('/api/appointments', {
-        method: 'POST',
-        body: payload,
-      });
-      setAppointments((prev) => [...prev, created].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)));
-      setShowCreateForm(false);
-      setCreateForm(emptyCreateForm);
-      resetPatientPicker();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setCreateError(err.message || 'Este médico já tem um agendamento marcado para este horário.');
-      } else if (err instanceof ApiError) {
-        setCreateError(err.message);
-      } else {
-        setCreateError('Não foi possível cadastrar o agendamento. Tente novamente.');
+  function handleDetailSaved(updated: Appointment) {
+    setAppointments((prev) => {
+      if (prev.some((a) => a.id === updated.id)) {
+        return prev.map((a) => (a.id === updated.id ? updated : a));
       }
-    } finally {
-      setIsCreating(false);
-    }
+      return [...prev, updated].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+    });
   }
 
   async function handleCancel(appointment: Appointment) {
@@ -480,7 +286,7 @@ export function AppointmentsPage() {
         </div>
         <button
           type="button"
-          onClick={() => openCreateForm()}
+          onClick={() => openCreateModal()}
           className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 text-sm w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" /> Novo agendamento
@@ -575,7 +381,7 @@ export function AppointmentsPage() {
           availability={filterAvailability}
           referenceDate={referenceDate}
           filterDoctorId={filterDoctorId}
-          onAppointmentClick={startReschedule}
+          onAppointmentClick={openViewModal}
           onSlotClick={handleSlotClick}
           doctorsForDayColumns={viewMode === 'dia' && filterDoctorId == null ? activeDoctors : undefined}
         />
@@ -626,41 +432,52 @@ export function AppointmentsPage() {
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-700">{appointment.confirmedAt ? 'Sim' : 'Não'}</td>
                       <td className="px-5 py-3.5 text-sm">
-                        {appointment.status === 'CONFIRMED' && (
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => handleMarkAttended(appointment)}
-                              disabled={attendingId === appointment.id}
-                              className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
-                            >
-                              {attendingId === appointment.id ? 'Marcando...' : 'Marcar como atendido'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMarkNoShow(appointment)}
-                              disabled={markingNoShowId === appointment.id}
-                              className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50"
-                            >
-                              {markingNoShowId === appointment.id ? 'Marcando...' : 'Marcar falta'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => startReschedule(appointment)}
-                              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                            >
-                              Reagendar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCancel(appointment)}
-                              disabled={cancellingId === appointment.id}
-                              className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
-                            >
-                              {cancellingId === appointment.id ? 'Cancelando...' : 'Cancelar'}
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => openViewModal(appointment)}
+                            aria-label="Ver detalhes"
+                            title="Ver detalhes"
+                            className="text-slate-500 hover:text-slate-700"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {appointment.status === 'CONFIRMED' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleMarkAttended(appointment)}
+                                disabled={attendingId === appointment.id}
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
+                              >
+                                {attendingId === appointment.id ? 'Marcando...' : 'Marcar como atendido'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMarkNoShow(appointment)}
+                                disabled={markingNoShowId === appointment.id}
+                                className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50"
+                              >
+                                {markingNoShowId === appointment.id ? 'Marcando...' : 'Marcar falta'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => startReschedule(appointment)}
+                                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                              >
+                                Reagendar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCancel(appointment)}
+                                disabled={cancellingId === appointment.id}
+                                className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                              >
+                                {cancellingId === appointment.id ? 'Cancelando...' : 'Cancelar'}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -671,283 +488,17 @@ export function AppointmentsPage() {
         </div>
       )}
 
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-slate-900">Cadastrar agendamento</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateForm(false);
-                  resetPatientPicker();
-                }}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} noValidate className="p-6 space-y-4">
-              {createError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{createError}</div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="create-doctor" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Médico
-                  </label>
-                  <select
-                    id="create-doctor"
-                    value={createForm.doctorId}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, doctorId: e.target.value }))}
-                    required
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                  >
-                    <option value="" disabled>
-                      Selecione um médico
-                    </option>
-                    {activeDoctors.map((doctor) => (
-                      <option key={doctor.id} value={doctor.id}>
-                        {doctor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="create-date" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Data
-                  </label>
-                  <input
-                    id="create-date"
-                    type="date"
-                    min={todayAsInputValue()}
-                    value={createForm.date}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, date: e.target.value }))}
-                    required
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="create-time" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Horário
-                  </label>
-                  <input
-                    id="create-time"
-                    type="time"
-                    value={createForm.startTime}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, startTime: e.target.value }))}
-                    required
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                  />
-                </div>
-                <div className="col-span-1 sm:col-span-2">
-                  <label htmlFor="create-service" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Serviço (opcional)
-                  </label>
-                  <select
-                    id="create-service"
-                    value={createForm.serviceId ?? ''}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({
-                        ...f,
-                        serviceId: e.target.value ? Number(e.target.value) : null,
-                      }))
-                    }
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                  >
-                    <option value="">Selecione um serviço</option>
-                    {services.map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {service.name}
-                      </option>
-                    ))}
-                  </select>
-                  {(() => {
-                    const selectedService = services.find((service) => Number(service.id) === createForm.serviceId);
-                    if (!selectedService) return null;
-                    return (
-                      <div className="mt-1.5">
-                        <p className="text-sm text-slate-700">Preço: {currencyFormatter.format(selectedService.price)}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Ao marcar este agendamento como atendido, uma conta a receber será gerada automaticamente.
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <div className="col-span-1 sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Paciente</label>
-
-                  {selectedPatient ? (
-                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">{selectedPatient.name}</p>
-                        <p className="text-xs text-slate-500">
-                          {selectedPatient.email ?? '—'} · {selectedPatient.phone ?? '—'}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleClearPatient}
-                        className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 shrink-0"
-                      >
-                        <X className="w-3.5 h-3.5" /> Trocar
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input
-                          id="create-patient-search"
-                          type="text"
-                          value={patientQuery}
-                          onChange={(e) => {
-                            setPatientQuery(e.target.value);
-                            setShowQuickAddPatient(false);
-                          }}
-                          placeholder="Buscar paciente por nome..."
-                          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                        />
-                      </div>
-
-                      {!showQuickAddPatient && patientQuery.trim().length >= 2 && (
-                        <div>
-                          {isSearchingPatient ? (
-                            <p className="text-xs text-slate-500">Buscando...</p>
-                          ) : patientResults.length > 0 ? (
-                            <ul className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden max-h-48 overflow-y-auto">
-                              {patientResults.map((patient) => (
-                                <li key={patient.id}>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSelectPatient(patient)}
-                                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors"
-                                  >
-                                    <p className="text-sm font-semibold text-slate-800">{patient.name}</p>
-                                    <p className="text-xs text-slate-500">
-                                      {patient.email ?? '—'} · {patient.phone ?? '—'}
-                                    </p>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <div className="text-sm text-slate-500 space-y-2">
-                              <p>Nenhum paciente encontrado.</p>
-                              <button
-                                type="button"
-                                onClick={openQuickAddPatient}
-                                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                              >
-                                + Cadastrar novo paciente
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {showQuickAddPatient && (
-                        <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/60">
-                          {quickAddError && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
-                              {quickAddError}
-                            </div>
-                          )}
-                          <div>
-                            <label htmlFor="quick-add-patient-name" className="block text-sm font-medium text-slate-700 mb-1.5">
-                              Nome
-                            </label>
-                            <input
-                              id="quick-add-patient-name"
-                              type="text"
-                              value={quickAddForm.name}
-                              onChange={(e) => setQuickAddForm((f) => ({ ...f, name: e.target.value }))}
-                              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="quick-add-patient-email" className="block text-sm font-medium text-slate-700 mb-1.5">
-                              E-mail
-                            </label>
-                            <input
-                              id="quick-add-patient-email"
-                              type="email"
-                              value={quickAddForm.email}
-                              onChange={(e) => setQuickAddForm((f) => ({ ...f, email: e.target.value }))}
-                              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="quick-add-patient-phone" className="block text-sm font-medium text-slate-700 mb-1.5">
-                              Telefone
-                            </label>
-                            <input
-                              id="quick-add-patient-phone"
-                              type="tel"
-                              value={quickAddForm.phone}
-                              onChange={(e) => setQuickAddForm((f) => ({ ...f, phone: e.target.value }))}
-                              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400 bg-white transition-all"
-                            />
-                          </div>
-                          <div className="flex gap-3 justify-end">
-                            <button
-                              type="button"
-                              onClick={() => setShowQuickAddPatient(false)}
-                              className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleQuickAddPatient}
-                              disabled={isCreatingPatient || !quickAddForm.name.trim()}
-                              className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 shadow-sm disabled:opacity-50 transition-all"
-                            >
-                              {isCreatingPatient ? 'Salvando...' : 'Salvar paciente'}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <label className="col-span-1 sm:col-span-2 flex items-start gap-2 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={createForm.lgpdConsent}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, lgpdConsent: e.target.checked }))}
-                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-200"
-                  />
-                  Paciente autorizou o uso dos seus dados para fins de agendamento, conforme a LGPD.
-                </label>
-              </div>
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    resetPatientPicker();
-                  }}
-                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreating || !createForm.lgpdConsent || !selectedPatient}
-                  className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 shadow-sm disabled:opacity-50 transition-all"
-                >
-                  {isCreating ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {detailModal && (
+        <AppointmentDetailModal
+          mode={detailModal.mode}
+          appointmentId={detailModal.mode === 'view' ? detailModal.appointmentId : undefined}
+          doctors={activeDoctors}
+          onClose={() => setDetailModal(null)}
+          onSaved={handleDetailSaved}
+          initialDoctorId={detailModal.mode === 'create' ? detailModal.initialDoctorId : undefined}
+          initialDate={detailModal.mode === 'create' ? detailModal.initialDate : undefined}
+          initialStartTime={detailModal.mode === 'create' ? detailModal.initialStartTime : undefined}
+        />
       )}
 
       {reschedulingId !== null && (

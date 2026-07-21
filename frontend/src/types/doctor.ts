@@ -1,3 +1,5 @@
+import type { Permission } from './auth';
+
 export type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface Doctor {
@@ -13,6 +15,7 @@ export interface Doctor {
 export interface GrantDoctorAccessPayload {
   email: string;
   password: string;
+  permissions: Permission[];
 }
 
 export interface DoctorAccessResponse {

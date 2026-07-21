@@ -16,6 +16,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import type { Permission, UserRole } from '../types/auth';
 
 interface SidebarProps {
   expanded: boolean;
@@ -30,34 +31,47 @@ interface NavItem {
   end?: boolean;
   icon: typeof LayoutDashboard;
   label: string;
+  permission?: Permission;
+  roles?: UserRole[];
 }
 
-const ADMIN_ITEMS: NavItem[] = [
+const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', end: true, icon: LayoutDashboard, label: 'Início' },
-  { to: '/dashboard/medicos', icon: Users, label: 'Médicos' },
-  { to: '/dashboard/pacientes', icon: UserRound, label: 'Pacientes' },
-  { to: '/dashboard/agendamentos', icon: Calendar, label: 'Agendamentos' },
-  { to: '/dashboard/financeiro', icon: Wallet, label: 'Financeiro' },
-  { to: '/dashboard/plano', icon: CreditCard, label: 'Plano' },
-  { to: '/dashboard/personalizacao', icon: Palette, label: 'Personalização' },
+  { to: '/dashboard/usuarios', icon: Users, label: 'Usuários', permission: 'MANAGE_USERS' },
+  { to: '/dashboard/pacientes', icon: UserRound, label: 'Pacientes', permission: 'MANAGE_PATIENTS' },
+  { to: '/dashboard/agendamentos', icon: Calendar, label: 'Agendamentos', permission: 'MANAGE_APPOINTMENTS' },
+  { to: '/dashboard/financeiro', icon: Wallet, label: 'Financeiro', permission: 'MANAGE_FINANCE' },
+  { to: '/dashboard/plano', icon: CreditCard, label: 'Plano', roles: ['ADMIN'] },
+  { to: '/dashboard/personalizacao', icon: Palette, label: 'Personalização', roles: ['ADMIN'] },
+  { to: '/dashboard/minha-agenda', icon: Calendar, label: 'Minha Agenda', roles: ['DOCTOR'] },
+  { to: '/dashboard/minha-disponibilidade', icon: Clock, label: 'Minha Disponibilidade', roles: ['DOCTOR'] },
+  { to: '/dashboard/minhas-folgas', icon: CalendarOff, label: 'Minhas Folgas', roles: ['DOCTOR'] },
+  { to: '/dashboard/google-calendar', icon: RefreshCw, label: 'Google Calendar', roles: ['DOCTOR'] },
   { to: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 
-const DOCTOR_ITEMS: NavItem[] = [
-  { to: '/dashboard', end: true, icon: LayoutDashboard, label: 'Início' },
-  { to: '/dashboard/minha-agenda', icon: Calendar, label: 'Minha Agenda' },
-  { to: '/dashboard/minha-disponibilidade', icon: Clock, label: 'Minha Disponibilidade' },
-  { to: '/dashboard/minhas-folgas', icon: CalendarOff, label: 'Minhas Folgas' },
-  { to: '/dashboard/google-calendar', icon: RefreshCw, label: 'Google Calendar' },
-  { to: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
-];
+const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrador',
+  DOCTOR: 'Médico',
+  STAFF: 'Equipe',
+};
+
+function isNavItemVisible(item: NavItem, role: UserRole, permissions: Permission[]): boolean {
+  if (item.roles) {
+    return item.roles.includes(role);
+  }
+  if (item.permission) {
+    return role === 'ADMIN' || permissions.includes(item.permission);
+  }
+  return true;
+}
 
 export function Sidebar({ expanded, mobileOpen, onMouseEnter, onMouseLeave, onMobileClose }: SidebarProps) {
   const navigate = useNavigate();
   const { clinic, user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const navItems = user?.role === 'ADMIN' ? ADMIN_ITEMS : user?.role === 'DOCTOR' ? DOCTOR_ITEMS : [];
+  const navItems = user ? NAV_ITEMS.filter((item) => isNavItemVisible(item, user.role, user.permissions)) : [];
 
   function handleLogout() {
     setShowUserMenu(false);
@@ -126,7 +140,7 @@ export function Sidebar({ expanded, mobileOpen, onMouseEnter, onMouseLeave, onMo
               <p className="text-sm font-semibold text-slate-900 truncate">{user?.name}</p>
               <p className="text-xs text-slate-500 truncate">{user?.email}</p>
               <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-primary-50 text-primary-700 text-[10px] font-semibold rounded-full capitalize">
-                {user?.role === 'ADMIN' ? 'Administrador' : 'Médico'}
+                {user ? ROLE_LABELS[user.role] : ''}
               </span>
             </div>
             <div className="p-2">
@@ -152,7 +166,7 @@ export function Sidebar({ expanded, mobileOpen, onMouseEnter, onMouseLeave, onMo
           <div className={`overflow-hidden whitespace-nowrap text-left flex-1 ${expanded ? '' : 'lg:hidden'}`}>
             <p className="text-sm font-medium text-white truncate">{user?.name ?? clinic?.name}</p>
             <p className="text-xs text-slate-400 capitalize truncate">
-              {user?.role === 'ADMIN' ? 'Administrador' : 'Médico'}
+              {user ? ROLE_LABELS[user.role] : ''}
             </p>
           </div>
           <ChevronUp

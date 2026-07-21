@@ -7,7 +7,15 @@ export interface Clinic {
   trialEndsAt: string;
 }
 
-export type UserRole = 'ADMIN' | 'DOCTOR';
+export type UserRole = 'ADMIN' | 'DOCTOR' | 'STAFF';
+
+export type Permission =
+  | 'MANAGE_PATIENTS'
+  | 'MANAGE_APPOINTMENTS'
+  | 'MANAGE_FINANCE'
+  | 'MANAGE_SERVICES'
+  | 'MANAGE_USERS'
+  | 'VIEW_REPORTS';
 
 export interface User {
   id: string;
@@ -15,6 +23,7 @@ export interface User {
   email: string;
   role: UserRole;
   doctorId: string | null;
+  permissions: Permission[];
 }
 
 export interface AuthResponse {
