@@ -9,6 +9,7 @@ import java.time.Instant;
 public record ReceivableResponse(
         Long id,
         Long appointmentId,
+        Long patientId,
         String patientName,
         String doctorName,
         String description,
@@ -21,6 +22,7 @@ public record ReceivableResponse(
         return new ReceivableResponse(
                 r.getId(),
                 r.getAppointment().getId(),
+                r.getAppointment().getPatient() != null ? r.getAppointment().getPatient().getId() : null,
                 r.getAppointment().getPatientName(),
                 r.getDoctor().getName(),
                 r.getDescription(),
