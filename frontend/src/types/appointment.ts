@@ -40,7 +40,7 @@ export interface AppointmentReschedulePayload {
   startTime: string;
 }
 
-export type AppointmentStatus = 'CONFIRMED' | 'ATTENDED' | 'CANCELLED';
+export type AppointmentStatus = 'CONFIRMED' | 'ATTENDED' | 'NO_SHOW' | 'CANCELLED';
 
 export interface Appointment {
   id: number;

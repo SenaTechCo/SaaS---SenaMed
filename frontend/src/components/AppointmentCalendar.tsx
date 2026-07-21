@@ -110,6 +110,7 @@ function minutesToTime(minutes: number): string {
 function statusClasses(status: Appointment['status']): string {
   if (status === 'CONFIRMED') return 'bg-green-50 text-green-700';
   if (status === 'ATTENDED') return 'bg-blue-50 text-blue-700';
+  if (status === 'NO_SHOW') return 'bg-red-50 text-red-700';
   return 'bg-slate-100 text-slate-500';
 }
 

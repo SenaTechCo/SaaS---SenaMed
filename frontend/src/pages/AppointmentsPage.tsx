@@ -14,12 +14,14 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', cu
 function appointmentStatusClasses(status: Appointment['status']): string {
   if (status === 'CONFIRMED') return 'bg-green-50 text-green-700';
   if (status === 'ATTENDED') return 'bg-blue-50 text-blue-700';
+  if (status === 'NO_SHOW') return 'bg-red-50 text-red-700';
   return 'bg-slate-100 text-slate-500';
 }
 
 function appointmentStatusLabel(status: Appointment['status']): string {
   if (status === 'CONFIRMED') return 'Confirmado';
   if (status === 'ATTENDED') return 'Atendido';
+  if (status === 'NO_SHOW') return 'Faltou';
   return 'Cancelado';
 }
 
@@ -104,6 +106,7 @@ export function AppointmentsPage() {
   const [services, setServices] = useState<ServiceOffering[]>([]);
 
   const [attendingId, setAttendingId] = useState<number | null>(null);
+  const [markingNoShowId, setMarkingNoShowId] = useState<number | null>(null);
 
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientQuery, setPatientQuery] = useState('');
@@ -387,6 +390,19 @@ export function AppointmentsPage() {
     }
   }
 
+  async function handleMarkNoShow(appointment: Appointment) {
+    setRowError(null);
+    setMarkingNoShowId(appointment.id);
+    try {
+      const updated = await apiFetch<Appointment>(`/api/appointments/${appointment.id}/faltou`, { method: 'PATCH' });
+      setAppointments((prev) => prev.map((a) => (a.id === appointment.id ? updated : a)));
+    } catch (err) {
+      setRowError(err instanceof ApiError ? err.message : 'Não foi possível marcar falta neste agendamento.');
+    } finally {
+      setMarkingNoShowId(null);
+    }
+  }
+
   function startReschedule(appointment: Appointment) {
     setReschedulingId(appointment.id);
     setRescheduleForm({ date: appointment.date, startTime: appointment.startTime });
@@ -619,6 +635,14 @@ export function AppointmentsPage() {
                               className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
                             >
                               {attendingId === appointment.id ? 'Marcando...' : 'Marcar como atendido'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMarkNoShow(appointment)}
+                              disabled={markingNoShowId === appointment.id}
+                              className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50"
+                            >
+                              {markingNoShowId === appointment.id ? 'Marcando...' : 'Marcar falta'}
                             </button>
                             <button
                               type="button"
